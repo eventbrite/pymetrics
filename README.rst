@@ -76,6 +76,12 @@ Provided publisher plugins include Statsd, Datadog, Python Logging, SQLite, and 
 simple and we encourage you to share your work with the community by submitting a pull request.
 
 
+License
+-------
+
+PyMetrics is licensed under the `Apache License, version 2.0 <LICENSE>`_.
+
+
 Installation
 ------------
 
