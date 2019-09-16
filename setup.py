@@ -6,8 +6,10 @@ from __future__ import (
 )
 
 import codecs
-
-from setuptools import setup
+from setuptools import (
+    find_packages,
+    setup,
+)
 
 from pymetrics import __version__
 
@@ -35,7 +37,7 @@ setup(
     description='Versatile metrics collection for Python',
     long_description=readme(),
     url='https://github.com/eventbrite/pymetrics',
-    packages=[str('pymetrics')],
+    packages=list(map(str, find_packages(include=['pymetrics', 'pymetrics.*']))),
     package_data={str('pymetrics'): [str('py.typed')]},  # PEP 561
     zip_safe=False,  # PEP 561
     include_package_data=True,
