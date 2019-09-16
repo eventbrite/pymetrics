@@ -1,0 +1,17 @@
+/build
+docs/_build
+/dist
+*.egg-info
+*.pyc
+*.eggs
+__pycache__
+.cache
+*.swp
+.idea
+*.iml
+.coverage
+coverage.xml
+pytests.xml
+.pytest_cache
+.mypy_cache
+.tox
