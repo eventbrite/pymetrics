@@ -1,0 +1,46 @@
+os: linux
+dist: xenial
+language: python
+matrix:
+  include:
+    - stage: build
+      python: '2.7'
+      install:
+        - pip install -U pip setuptools flake8
+      script:
+        - python setup.py test --addopts "--cov-report term-missing"
+        - flake8 .
+    - stage: build
+      python: '3.5'
+      install:
+        - pip install -U pip setuptools
+      script:
+        - python setup.py test --addopts "--cov-report term-missing"
+    - stage: build
+      python: '3.6'
+      install:
+        - pip install -U pip setuptools flake8
+      script:
+        - python setup.py test --addopts "--cov-report term-missing"
+        - flake8 .
+    - stage: build
+      python: '3.7'
+      install:
+        - pip install -U pip setuptools mypy
+      script:
+        - python setup.py test --addopts "--cov-report term-missing"
+        - mypy .
+    - stage: deploy
+      if: tag =~ ^[0-9]+\.[0-9]+\.[0-9]+
+      python: '3.6'
+      script: skip
+      install:
+        - pip install -U pip setuptools pyopenssl
+      deploy:
+        provider: pypi
+        username: eventbrite
+        password:
+           secure: 0LI7rDLNO8sg6xSvnnIMhpist4n1Vpupurk1+mIno+ZA0+LMcirayLRDr9H9lNvHO4GIrb1JEDkSOXQNx53HnbJOu2sfniZHf/w8P2GXJkgIVO7zgGsCOees4e9E8iRTf6XniA9bEuCLW9viZ9E3eTZxzUgNUKV4nqsX+JBomADft3YJXGjEvqKW8wGSjgqEwiVgPKQbP8YZpb2y9clVNPvynMXhTr90DHZWKx01vTCw8+iihtaK25PHX1fIUxFPf1IEieOGPvfFg7NWulBNa+8CzIx7rwCjmppGEVgTzwk+gyH7BiK1R45fgxLnRHCLVDDp7pP6gX30EIdIg+BI35xg9bqG2V+IaMtUIJJ7nIh5kABvHNhNilPJvWrGyUTwIDNSqOnh9TvtsQV8FeENU29S5fG2MuzQfSzwnwYmqQ0qYJ7/SfxYE9aBbSVOTXZ8G2OSx+L/+y7QnZ7lu1XQb4gDvL0+DhOrZ3CwNH5Lv3ZSESqSyKDd8StcLkHUuzjtdjluSmavtJEB4n6mupbOHQ617HQOHcBt43MuYkNB8J9pqaH1vQcyQ39NC2lqynOVn6y2h18wseZpti/LknxwQWL70i0MeZU2Wi0u/5nNDxnp4Gza7ynGUqUGxzLzkgAxqlWjqt4tyyIpme2AgeCJhGZmtvmc9RR7V+WBpEzUFTo=
+        distributions: "sdist bdist_wheel"
+        on:
+          tags: true
