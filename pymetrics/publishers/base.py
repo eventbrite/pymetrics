@@ -4,11 +4,11 @@ from __future__ import (
 )
 
 import abc
-from typing import Iterable  # noqa: F401 TODO Python 3
+from typing import Iterable
 
 import six
 
-from pymetrics.instruments import Metric  # noqa: F401 TODO Python 3
+from pymetrics.instruments import Metric
 
 
 __all__ = (

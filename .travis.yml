@@ -6,29 +6,33 @@ matrix:
     - stage: build
       python: '2.7'
       install:
-        - pip install -U pip setuptools flake8
+        - pip install -U pip setuptools "flake8~=3.7,>=3.7.8"
+        - pip install .[testing]
       script:
-        - python setup.py test --addopts "--cov-report term-missing"
+        - pytest --cov-report term-missing
         - flake8 .
     - stage: build
       python: '3.5'
       install:
         - pip install -U pip setuptools
+        - pip install .[testing]
       script:
-        - python setup.py test --addopts "--cov-report term-missing"
+        - pytest --cov-report term-missing
     - stage: build
       python: '3.6'
       install:
-        - pip install -U pip setuptools flake8
+        - pip install -U pip setuptools "flake8~=3.7,>=3.7.8"
+        - pip install .[testing]
       script:
-        - python setup.py test --addopts "--cov-report term-missing"
+        - pytest --cov-report term-missing
         - flake8 .
     - stage: build
       python: '3.7'
       install:
-        - pip install -U pip setuptools mypy
+        - pip install -U pip setuptools
+        - pip install .[testing]
       script:
-        - python setup.py test --addopts "--cov-report term-missing"
+        - pytest --cov-report term-missing
         - mypy .
     - stage: deploy
       if: tag =~ ^[0-9]+\.[0-9]+\.[0-9]+
@@ -40,7 +44,7 @@ matrix:
         provider: pypi
         username: eventbrite
         password:
-           secure: 0LI7rDLNO8sg6xSvnnIMhpist4n1Vpupurk1+mIno+ZA0+LMcirayLRDr9H9lNvHO4GIrb1JEDkSOXQNx53HnbJOu2sfniZHf/w8P2GXJkgIVO7zgGsCOees4e9E8iRTf6XniA9bEuCLW9viZ9E3eTZxzUgNUKV4nqsX+JBomADft3YJXGjEvqKW8wGSjgqEwiVgPKQbP8YZpb2y9clVNPvynMXhTr90DHZWKx01vTCw8+iihtaK25PHX1fIUxFPf1IEieOGPvfFg7NWulBNa+8CzIx7rwCjmppGEVgTzwk+gyH7BiK1R45fgxLnRHCLVDDp7pP6gX30EIdIg+BI35xg9bqG2V+IaMtUIJJ7nIh5kABvHNhNilPJvWrGyUTwIDNSqOnh9TvtsQV8FeENU29S5fG2MuzQfSzwnwYmqQ0qYJ7/SfxYE9aBbSVOTXZ8G2OSx+L/+y7QnZ7lu1XQb4gDvL0+DhOrZ3CwNH5Lv3ZSESqSyKDd8StcLkHUuzjtdjluSmavtJEB4n6mupbOHQ617HQOHcBt43MuYkNB8J9pqaH1vQcyQ39NC2lqynOVn6y2h18wseZpti/LknxwQWL70i0MeZU2Wi0u/5nNDxnp4Gza7ynGUqUGxzLzkgAxqlWjqt4tyyIpme2AgeCJhGZmtvmc9RR7V+WBpEzUFTo=
+           secure: qluSB1MjW1jwe61II0ZQK6FwgoS/lFLTpG3sSasJ5iIlbeXcW53RIMt1DIbWZpv8EXuzvOuZ3vrvilUaOeNXeDuLScVxEtXDND+l7WBswRXhE5m2CrfltwbPv+bbRSwhrj2x7kfIYHlggjJZ4Eal4oat0mJpj2N/a5T4NZCPrwId/2syt0r7bMXIUOBtcYKoWAu6OBiFPqWzSXRv0tIhUL56ELSO316A56rcK4tSUB6095b9zJNrbWH0LFYsSHdHgW+hwUvQuss28q9NsmOvAJKlAXdzMhpxpmICkGvhRFl8AsowvzW45re6vwK465y0Ip02k6JTAYIqIfpjLmtL55APv6q6g9TIZB2QvMjxlOGS0W9ZapwVnnqU/ajhORFXDLCCvk4fsOjcVEX8Q3zJCyT4Ndbeumhs67HZwcNCg7Qvsr2RWwhZRUpvUW405BNCooancv76IPOe/gF9gH4iF/eBVrokOE3Io5XP33fbQFlqUiNL3b5Hg4bp64Hw8YkQ6WTiy12gSVoiXQrZz0MNNVHHTUB4w52JFuTk5NWh/gMxtjbj18+MukWIfdsAusrU7Elq7DH2OqdY6cNRqgr5Zy84YCXxGGe6PYZjh1xot9eLRVHBuengYo24CWX306Vj5MK2ojxdZkl7LiYZGN5qqf4EO606otGq8JiFa5ZBcts=
         distributions: "sdist bdist_wheel"
         on:
           tags: true

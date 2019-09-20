@@ -5,7 +5,7 @@ from __future__ import (
 
 import enum
 import time
-from typing import (  # noqa: F401 TODO Python 3
+from typing import (
     Any,
     Callable,
     Optional,
@@ -15,7 +15,13 @@ from typing import (  # noqa: F401 TODO Python 3
     Union,
 )
 
-import six  # noqa: F401 TODO Python 3
+import six
+
+
+try:
+    from typing import Literal  # type: ignore
+except ImportError:
+    from typing_extensions import Literal
 
 
 __all__ = (
@@ -36,6 +42,7 @@ Tag = Union[six.text_type, six.binary_type, int, float, bool, None]
 
 _valid_initial_values = (int, float)  # type: Tuple[Type, ...]
 if six.PY2:
+    # noinspection PyUnresolvedReferences
     _valid_initial_values += (long, )  # noqa: F821
 
 
@@ -245,6 +252,7 @@ class Timer(Histogram):
         if not self._start_time:
             raise ValueError('Cannot stop a timer before it has started')
         self._running_value += time.time() - self._start_time
+        self._start_time = None
 
     @property
     def value(self):  # type: () -> Optional[int]
@@ -255,7 +263,9 @@ class Timer(Histogram):
 
         :return: The timer value
         """
-        if self._running_value > 0:
+        if self._running_value > 0 and not self._start_time:
+            # If the timer is not currently running but it has previously run, return that amount times the resolution
+            # noinspection PyTypeChecker
             return int(round(self._running_value * self.resolution))
 
         if self._value:
@@ -273,7 +283,7 @@ class Timer(Histogram):
         self.start()
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):  # type: (Any, Any, Any) -> bool
+    def __exit__(self, exc_type, exc_value, traceback):  # type: (Any, Any, Any) -> Literal[False]
         """
         Stops the timer at the end of a `with` block, regardless of whether an exception occurred.
 
@@ -284,6 +294,7 @@ class Timer(Histogram):
         :return: `False`
         """
         self.stop()
+        # noinspection PyTypeChecker
         return False
 
     def record_over_function(self, f, *args, **kwargs):  # type: (Callable[..., R], *Any, **Any) -> R

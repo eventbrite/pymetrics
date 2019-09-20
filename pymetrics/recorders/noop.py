@@ -3,9 +3,10 @@ from __future__ import (
     unicode_literals,
 )
 
-import six  # noqa: F401 TODO Python 3
+from conformity import fields
+import six
 
-from pymetrics.instruments import (  # noqa: F401 TODO Python 3
+from pymetrics.instruments import (
     Counter,
     Gauge,
     Histogram,
@@ -22,6 +23,11 @@ __all__ = (
 )
 
 
+@fields.ClassConfigurationSchema.provider(fields.Dictionary(
+    {},
+    allow_extra_keys=False,
+    description='The no-ops recorder has no constructor arguments.',
+))
 class NonOperationalMetricsRecorder(MetricsRecorder):
     """
     A special metrics recorder that ignores configuration and doesn't keep track of or publish any metrics, useful for

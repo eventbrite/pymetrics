@@ -5,7 +5,7 @@ from __future__ import (
 
 import copy
 import functools
-from typing import (  # noqa: F401 TODO Python 3
+from typing import (
     Any,
     Dict,
     List,

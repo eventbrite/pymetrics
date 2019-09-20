@@ -3,7 +3,7 @@ from __future__ import (
     unicode_literals,
 )
 
-from typing import Type  # noqa: F401 TODO Python 3
+from typing import Type
 
 import mock
 import pytest

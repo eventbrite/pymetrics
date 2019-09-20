@@ -5,7 +5,7 @@ from __future__ import (
 
 import abc
 import logging
-from typing import (  # noqa: F401 TODO Python 3
+from typing import (
     Any,
     Dict,
     Generator,
@@ -16,9 +16,9 @@ from typing import (  # noqa: F401 TODO Python 3
     Type,
 )
 
-import six  # noqa: F401 TODO Python 3
+import six
 
-from pymetrics.instruments import (  # noqa: F401 TODO Python 3
+from pymetrics.instruments import (
     Counter,
     Gauge,
     Histogram,

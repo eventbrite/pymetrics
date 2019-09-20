@@ -6,7 +6,7 @@ from __future__ import (
 import errno
 import logging
 import socket
-from typing import (  # noqa: F401 TODO Python 3
+from typing import (
     Iterable,
     List,
     Union,
@@ -16,7 +16,7 @@ from typing import (  # noqa: F401 TODO Python 3
 from conformity import fields
 import six
 
-from pymetrics.instruments import (  # noqa: F401 TODO Python 3
+from pymetrics.instruments import (
     Counter,
     Gauge,
     Histogram,

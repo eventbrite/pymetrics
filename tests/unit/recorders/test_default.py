@@ -4,7 +4,9 @@ from __future__ import (
 )
 
 import time
-from typing import (  # noqa: F401 TODO Python 3
+from typing import (
+    Any,
+    Dict,
     Optional,
     cast,
 )
@@ -19,6 +21,8 @@ from pymetrics.instruments import (
     TimerResolution,
 )
 from pymetrics.publishers.base import MetricsPublisher
+from pymetrics.publishers.null import NullPublisher
+from pymetrics.recorders.base import MetricsRecorder
 from pymetrics.recorders.default import DefaultMetricsRecorder
 
 
@@ -221,6 +225,71 @@ class TestDefaultMetricsRecorderConfiguration(object):
 
 
 # noinspection PyProtectedMember
+class TestConfigurationWithConformity(object):
+    def test_no_prefix_no_config(self):
+        field = fields.ClassConfigurationSchema(base_class=MetricsRecorder)
+
+        config = {
+            'path': 'pymetrics.recorders.default.DefaultMetricsRecorder',
+            'kwargs': {},
+        }  # type: Dict[six.text_type, Any]
+        assert field.errors(config)
+
+        config = {
+            'path': 'pymetrics.recorders.default.DefaultMetricsRecorder',
+            'kwargs': {
+                'prefix': None,
+            },
+        }
+        assert not field.errors(config)
+
+        recorder = config['object'](**config['kwargs'])
+        assert isinstance(recorder, DefaultMetricsRecorder)
+        assert recorder.prefix is None
+        assert recorder._configuration is None
+
+    def test_prefix_no_config(self):
+        field = fields.ClassConfigurationSchema(base_class=MetricsRecorder)
+
+        config = {
+            'path': 'pymetrics.recorders.default.DefaultMetricsRecorder',
+            'kwargs': {
+                'prefix': 'hello.world',
+            },
+        }  # type: Dict[six.text_type, Any]
+        assert not field.errors(config)
+
+        recorder = config['object'](**config['kwargs'])
+        assert isinstance(recorder, DefaultMetricsRecorder)
+        assert recorder.prefix == 'hello.world'
+        assert recorder._configuration is None
+
+    def test_prefix_with_config(self):
+        field = fields.ClassConfigurationSchema(base_class=MetricsRecorder)
+
+        config = {
+            'path': 'pymetrics.recorders.default.DefaultMetricsRecorder',
+            'kwargs': {
+                'prefix': 'goodbye.mars',
+                'config': {
+                    'version': 2,
+                    'publishers': [
+                        {'path': 'pymetrics.publishers.null.NullPublisher'}
+                    ],
+                },
+            },
+        }  # type: Dict[six.text_type, Any]
+        assert not field.errors(config)
+
+        recorder = config['object'](**config['kwargs'])
+        assert isinstance(recorder, DefaultMetricsRecorder)
+        assert recorder.prefix == 'goodbye.mars'
+        assert recorder._configuration is not None
+        assert len(recorder._configuration.publishers) == 1
+        assert isinstance(recorder._configuration.publishers[0], NullPublisher)
+
+
+# noinspection PyProtectedMember
 class TestDefaultMetricsRecorder(object):
     @staticmethod
     def _recorder(prefix, meta=False):  # type: (Optional[six.text_type], bool) -> DefaultMetricsRecorder
@@ -248,15 +317,18 @@ class TestDefaultMetricsRecorder(object):
 
         metrics = recorder.get_all_metrics()
         assert len(metrics) == 3
-        assert metrics[0].name == 'me.foo.bar'
-        assert not metrics[0].tags
-        assert metrics[0].value == 3
-        assert metrics[1].name == 'me.foo.bar'
-        assert metrics[1].tags['tag_1'] == 'value_1'
-        assert metrics[1].value == 2
-        assert metrics[2].name == 'me.baz.qux'
-        assert not metrics[2].tags
-        assert metrics[2].value == 1
+
+        for metric in metrics:
+            if metric.name == 'me.foo.bar':
+                if metric.value == 3:
+                    assert not metric.tags
+                else:
+                    assert metric.value == 2
+                    assert metric.tags['tag_1'] == 'value_1'
+            else:
+                assert metric.name == 'me.baz.qux'
+                assert not metric.tags
+                assert metric.value == 1
 
     def test_gauge(self):
         recorder = self._recorder('you')
