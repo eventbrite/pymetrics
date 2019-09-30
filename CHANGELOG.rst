@@ -1,7 +1,7 @@
 Changelog
 =========
 
-0.20.0 (2019-09-??)
+0.20.0 (2019-09-16)
 -------------------
 
-- First release after open-sourcing
+- Initial commit
