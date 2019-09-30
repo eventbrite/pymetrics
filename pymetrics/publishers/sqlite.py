@@ -5,7 +5,7 @@ from __future__ import (
 
 import contextlib
 import sqlite3
-from typing import (  # noqa: F401 TODO Python 3
+from typing import (
     Any,
     Generator,
     Optional,

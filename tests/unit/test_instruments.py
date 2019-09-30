@@ -274,9 +274,14 @@ def test_timer():
 
         assert timer.value == 1312
 
-    assert repr(timer) == 'Timer(name="test.timer.3", value=1312)'
+        timer.start()
+        assert timer.value is None
 
-    timer._start_time = None
+        frozen_time.tick(_milliseconds(2))
+        timer.stop()
+        assert timer.value == 3312
+
+    assert repr(timer) == 'Timer(name="test.timer.3", value=3312)'
 
     with pytest.raises(ValueError):
         timer.stop()

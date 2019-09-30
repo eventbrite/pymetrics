@@ -4,7 +4,7 @@ from __future__ import (
 )
 
 import time
-from typing import (  # noqa: F401 TODO Python 3
+from typing import (
     Any,
     Dict,
     List,
@@ -15,13 +15,15 @@ from typing import (  # noqa: F401 TODO Python 3
     Union,
 )
 
+from conformity import fields
 import six
 
-from pymetrics.configuration import (  # noqa: F401 TODO Python 3
+from pymetrics.configuration import (
+    CONFIGURATION_SCHEMA,
     Configuration,
     create_configuration,
 )
-from pymetrics.instruments import (  # noqa: F401 TODO Python 3
+from pymetrics.instruments import (
     Counter,
     Gauge,
     Histogram,
@@ -42,8 +44,21 @@ __all__ = (
 M = TypeVar('M', bound=Metric)
 
 
+@fields.ClassConfigurationSchema.provider(fields.Dictionary(
+    {
+        'prefix': fields.Nullable(fields.UnicodeString(
+            description='An optional prefix for all metrics names (the period delimiter will be added for you)',
+        )),
+        'config': fields.Nullable(CONFIGURATION_SCHEMA),
+    },
+    allow_extra_keys=False,
+    optional_keys=('config', ),
+    description='The configuration schema for the default metrics recorder constructor arguments. Without the '
+                '`config` key, it will not be able publish metrics.',
+))
 class DefaultMetricsRecorder(MetricsRecorder):
-    def __init__(self, prefix, config=None):  # type: (Optional[six.text_type], Dict[six.text_type, Any]) -> None
+    def __init__(self, prefix, config=None):
+        # type: (Optional[six.text_type], Optional[Dict[six.text_type, Any]]) -> None
         self.prefix = prefix
         self.counters = {}  # type: Dict[six.text_type, Counter]
         self.histograms = {}  # type: Dict[six.text_type, List[Histogram]]
@@ -163,7 +178,7 @@ class DefaultMetricsRecorder(MetricsRecorder):
 
         return metrics
 
-    def configure(self, config=None):  # type: (Dict[six.text_type, Any]) -> None
+    def configure(self, config=None):  # type: (Optional[Dict[six.text_type, Any]]) -> None
         if not self._configuration:
             # If this recorder is not yet configured
             configuration = None  # type: Optional[Configuration]

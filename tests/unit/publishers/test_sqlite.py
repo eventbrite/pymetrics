@@ -4,13 +4,13 @@ from __future__ import (
 )
 
 import datetime
-from typing import List  # noqa: F401 TODO Python 3
+from typing import List
 
 import freezegun
 import pytest
 import six
 
-from pymetrics.instruments import (  # noqa: F401 TODO Python 3
+from pymetrics.instruments import (
     Counter,
     Gauge,
     Histogram,

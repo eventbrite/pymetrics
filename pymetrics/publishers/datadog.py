@@ -3,7 +3,7 @@ from __future__ import (
     unicode_literals,
 )
 
-from typing import (  # noqa: F401 TODO Python 3
+from typing import (
     Dict,
     Iterable,
     List,
@@ -15,7 +15,7 @@ from typing import (  # noqa: F401 TODO Python 3
 from conformity import fields
 import six
 
-from pymetrics.instruments import (  # noqa: F401 TODO Python 3
+from pymetrics.instruments import (
     Counter,
     Gauge,
     Histogram,

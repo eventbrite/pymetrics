@@ -4,11 +4,11 @@ from __future__ import absolute_import  # DO NOT import UNICODE LITERALS in this
 import errno
 import re
 import socket
-from typing import List  # noqa: F401 TODO Python 3
+from typing import List
 
 import mock
 
-from pymetrics.instruments import (  # noqa: F401 TODO Python 3
+from pymetrics.instruments import (
     Counter,
     Gauge,
     Histogram,

@@ -3,10 +3,10 @@ from __future__ import (
     unicode_literals,
 )
 
-from typing import Iterable  # noqa: F401 TODO Python 3
+from typing import Iterable
 
-from pymetrics.configuration import Configuration  # noqa: F401 TODO Python 3
-from pymetrics.instruments import Metric  # noqa: F401 TODO Python 3
+from pymetrics.configuration import Configuration
+from pymetrics.instruments import Metric
 
 
 __all__ = (

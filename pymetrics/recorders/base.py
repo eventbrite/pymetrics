@@ -6,7 +6,7 @@ from __future__ import (
 import abc
 import copy
 import functools
-from typing import (  # noqa: F401 TODO Python 3
+from typing import (
     Any,
     Callable,
     TypeVar,
@@ -14,7 +14,7 @@ from typing import (  # noqa: F401 TODO Python 3
 
 import six
 
-from pymetrics.instruments import (  # noqa: F401 TODO Python 3
+from pymetrics.instruments import (
     Counter,
     Gauge,
     Histogram,

@@ -4,7 +4,7 @@ from __future__ import (
 )
 
 import logging
-from typing import (  # noqa: F401 TODO Python 3
+from typing import (
     Any,
     Iterable,
     Union,
@@ -15,7 +15,7 @@ from conformity import fields
 from conformity.fields.logging import PythonLogLevel
 import six
 
-from pymetrics.instruments import (  # noqa: F401 TODO Python 3
+from pymetrics.instruments import (
     Counter,
     Gauge,
     Histogram,
