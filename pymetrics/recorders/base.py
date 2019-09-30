@@ -59,7 +59,7 @@ class MetricsRecorder(object):
 
         :param name: The name of the metric
         :param force_new: Whether to force the creation of a new histogram if there is already an unpublished
-                          histogram with the same name.
+                          histogram with the same name and tags.
         :param initial_value: The initial value, which defaults to 0
         :param tags: An additional tags you want associated with this metric
         :return: the created histogram.
@@ -77,7 +77,7 @@ class MetricsRecorder(object):
 
         :param name: The name of the metric
         :param force_new: Whether to force the creation of a new timer if there is already an unpublished timer with
-                          the same name.
+                          the same name and tags.
         :param resolution: The resolution at which the timer should record, which defaults to milliseconds
         :param initial_value: The initial value, which defaults to 0
         :param tags: An additional tags you want associated with this metric
@@ -93,7 +93,7 @@ class MetricsRecorder(object):
 
         :param name: The name of the metric
         :param force_new: Whether to force the creation of a new gauge if there is already an unpublished gauge with
-                          the same name.
+                          the same name and tags.
         :param initial_value: The initial value, which defaults to 0
         :param tags: An additional tags you want associated with this metric
         :return: the created gauge.

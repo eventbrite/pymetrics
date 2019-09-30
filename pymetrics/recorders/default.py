@@ -59,6 +59,14 @@ M = TypeVar('M', bound=Metric)
 class DefaultMetricsRecorder(MetricsRecorder):
     def __init__(self, prefix, config=None):
         # type: (Optional[six.text_type], Optional[Dict[six.text_type, Any]]) -> None
+        """
+        Construct a new recorder.
+
+        :param prefix: A nullable prefix, which if non-null will be prepended to all metrics names, with a single
+                       period separating the prefix and the metrics name.
+        :param config: The configuration dictionary complying with the official PyMetrics Conformity configuration
+                       schema.
+        """
         self.prefix = prefix
         self.counters = {}  # type: Dict[six.text_type, Counter]
         self.histograms = {}  # type: Dict[six.text_type, List[Histogram]]
