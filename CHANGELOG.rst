@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.21.1 (2019-09-30)
+-------------------
+- [PATCH] Finish the documentation
+
 0.21.0 (2019-09-30)
 -------------------
 - First release after open-sourcing
