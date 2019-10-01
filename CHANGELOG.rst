@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.21.2 (2019-10-01)
+-------------------
+- [PATCH] Fix .readthedocs.yml
+
 0.21.1 (2019-09-30)
 -------------------
 - [PATCH] Finish the documentation
