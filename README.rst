@@ -47,13 +47,13 @@ Publishing metrics is a straightforward process involving two steps. First, conf
         ],
     }
 
-Then, use a ``MetricsRecorder`` in your application to collect and publish:
+Then, use a ``pymetrics.recorders.base.MetricsRecorder`` in your application to collect and publish:
 
 .. code-block:: python
 
-    from pymetrics.recorder import DefaultMetricsRecorder
+    from pymetrics.recorders.default import DefaultMetricsRecorder
 
-    metrics = MetricsRecorder(config=settings.METRICS_CONFIG)
+    metrics = DefaultMetricsRecorder(config=settings.METRICS_CONFIG)
 
     metrics.counter('counter.name').increment()
 
@@ -96,17 +96,17 @@ or ``Pipfile``:
 
     install_requires=[
         ...
-        'pymetrics~=1.26',
+        'pymetrics~=1.0',
         ...
     ]
 
 .. code-block:: text
 
-    pymetrics~=1.26
+    pymetrics~=1.0
 
 .. code-block:: text
 
-    pymetrics = {version="~=1.26"}
+    pymetrics = {version="~=1.0"}
 
 
 Documentation
