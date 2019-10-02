@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.21.4 (2019-10-02)
+-------------------
+- [PATCH] Do not raise an error on stopping un-started timer
+
 0.21.3 (2019-10-02)
 -------------------
 - [PATCH] Fix 'Cannot stop a timer before it has started'
