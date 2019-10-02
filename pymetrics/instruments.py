@@ -250,7 +250,7 @@ class Timer(Histogram):
         Stops the timer.
         """
         if self._start_time is None:
-            raise ValueError('Cannot stop a timer before it has started')
+            return  # Cannot stop a timer before it has started
         self._running_value += time.time() - self._start_time
         self._start_time = None
 
