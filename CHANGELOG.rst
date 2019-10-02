@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.21.3 (2019-10-02)
+-------------------
+- [PATCH] Fix 'Cannot stop a timer before it has started'
+
 0.21.2 (2019-10-01)
 -------------------
 - [PATCH] Fix .readthedocs.yml
