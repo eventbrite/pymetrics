@@ -283,5 +283,9 @@ def test_timer():
 
     assert repr(timer) == 'Timer(name="test.timer.3", value=3312)'
 
-    with pytest.raises(ValueError):
-        timer.stop()
+    # make sure no error is raised, nothing happens
+    timer.stop()
+    timer.stop()
+    timer.stop()
+
+    assert repr(timer) == 'Timer(name="test.timer.3", value=3312)'
