@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.21.5 (2019-11-01)
+-------------------
+- [PATCH] Add support for Python 3.8
+
 0.21.4 (2019-10-02)
 -------------------
 - [PATCH] Do not raise an error on stopping un-started timer
