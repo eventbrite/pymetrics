@@ -34,6 +34,14 @@ matrix:
       script:
         - pytest --cov-report term-missing
         - mypy .
+    - stage: build
+      python: '3.8'
+      install:
+        - pip install -U pip setuptools
+        - pip install .[testing]
+      script:
+        - pytest --cov-report term-missing
+        - mypy .
     - stage: deploy
       if: tag =~ ^[0-9]+\.[0-9]+\.[0-9]+
       python: '3.6'
