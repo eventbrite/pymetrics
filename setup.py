@@ -6,6 +6,7 @@ from __future__ import (
 )
 
 import codecs
+import sys
 
 from setuptools import (
     find_packages,
@@ -27,7 +28,7 @@ tests_require = [
     'pytest-runner',
     'mock',
     'more-itertools~=5.0',  # We must pin this, because 6.0 requires Python 3.
-    'mypy~=0.730;python_version>"3.4"',
+    'mypy~=0.740;python_version>"3.4"',
 ]
 
 setup(
@@ -51,6 +52,7 @@ setup(
         'typing-extensions~=3.7.4;python_version<"3.8"',
     ],
     tests_require=tests_require,
+    setup_requires=['pytest-runner'] if {'pytest', 'test', 'ptr'}.intersection(sys.argv) else [],
     test_suite='tests',
     extras_require={
         'testing': tests_require,
@@ -69,6 +71,7 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Software Development',
     ],
     project_urls={

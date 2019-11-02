@@ -384,6 +384,7 @@ class TestDefaultMetricsRecorder(object):
                 assert metric.tags['tag_3'] == 'value_3'
                 assert metric.value == 5
             elif metric.name == 'pymetrics.meta.recorder.get_all_metrics':
+                assert metric.value is not None
                 assert metric.value > 0
                 assert cast(Timer, metric).resolution == TimerResolution.MICROSECONDS
             else:

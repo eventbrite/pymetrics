@@ -59,6 +59,7 @@ class TestStatsdPublisher(object):
 
         self.all_received = True
 
+        assert self.sock is not None
         # noinspection PyBroadException
         try:
             bad = self.sock.recv(4096)
@@ -76,6 +77,7 @@ class TestStatsdPublisher(object):
 
         self.all_received = True
 
+        assert self.sock is not None
         # noinspection PyBroadException
         try:
             bad = self.sock.recv(4096)
@@ -117,6 +119,7 @@ class TestStatsdPublisher(object):
 
         self.all_received = True
 
+        assert self.sock is not None
         received = self.sock.recv(2048)
 
         assert received is not None
@@ -156,6 +159,7 @@ class TestStatsdPublisher(object):
 
         self.all_received = True
 
+        assert self.sock is not None
         received = self.sock.recv(2048)
 
         assert received is not None
@@ -191,6 +195,7 @@ class TestStatsdPublisher(object):
                 mock_logging.getLogger.return_value.error.call_args_list
             ))
 
+        assert self.sock is not None
         received = self.sock.recv(2048)
 
         assert received is not None
@@ -448,6 +453,7 @@ class TestStatsdPublisher(object):
                 mock_logging.getLogger.return_value.error.call_args_list
             ))
 
+        assert self.sock is not None
         received = self.sock.recv(10000)
         assert received is not None
 
@@ -510,6 +516,7 @@ class TestStatsdPublisher(object):
                 mock_logging.getLogger.return_value.error.call_args_list
             ))
 
+        assert self.sock is not None
         received = self.sock.recv(2048)
         assert received is not None
 
