@@ -27,6 +27,7 @@ from pymetrics.recorders.default import DefaultMetricsRecorder
 
 
 mock_publisher = mock.MagicMock(spec=MetricsPublisher)
+mock_publisher_extra = mock.MagicMock(spec=MetricsPublisher)
 
 
 # noinspection PyAbstractClass
@@ -36,6 +37,15 @@ mock_publisher = mock.MagicMock(spec=MetricsPublisher)
 class MockPublisher(MetricsPublisher):
     def __new__(cls, *args, **kwargs):
         return mock_publisher
+
+
+# noinspection PyAbstractClass
+@fields.ClassConfigurationSchema.provider(
+    fields.Dictionary({}),
+)
+class MockPublisherExtra(MetricsPublisher):
+    def __new__(cls, *args, **kwargs):
+        return mock_publisher_extra
 
 
 class FakeImproperlyConfigured(Exception):
@@ -157,9 +167,9 @@ class TestDefaultMetricsRecorderConfiguration(object):
         django_conf = mock.MagicMock()
         django_conf.settings.DEBUG = True
         django_conf.settings.METRICS = {
-            'version': 1,
+            'version': 2,
             'publishers': [
-                {'class': 'tests.unit.recorders.test_default:MockPublisher'},
+                {'path': 'tests.unit.recorders.test_default:MockPublisherExtra'},
             ]
         }
         django_conf.settings.SOA_SERVER_SETTINGS = {'metrics': {'kwargs': {'config': {
@@ -180,14 +190,16 @@ class TestDefaultMetricsRecorderConfiguration(object):
             assert recorder.is_configured is True
             assert recorder._configuration is not None
             assert len(recorder._configuration.publishers) == 1
-            assert recorder._configuration.version == 1
+            assert recorder._configuration.publishers[0] is mock_publisher_extra
+            assert recorder._configuration.version == 2
 
             recorder = DefaultMetricsRecorder('you')
 
             assert recorder.is_configured is True
             assert recorder._configuration is not None
             assert len(recorder._configuration.publishers) == 1
-            assert recorder._configuration.version == 1
+            assert recorder._configuration.publishers[0] is mock_publisher_extra
+            assert recorder._configuration.version == 2
 
     def test_config_django_available_soa_settings_used(self):
         django_exceptions = mock.MagicMock()
@@ -214,6 +226,7 @@ class TestDefaultMetricsRecorderConfiguration(object):
             assert recorder.is_configured is True
             assert recorder._configuration is not None
             assert len(recorder._configuration.publishers) == 1
+            assert recorder._configuration.publishers[0] is mock_publisher
             assert recorder._configuration.version == 2
 
             recorder = DefaultMetricsRecorder('you')
@@ -221,6 +234,7 @@ class TestDefaultMetricsRecorderConfiguration(object):
             assert recorder.is_configured is True
             assert recorder._configuration is not None
             assert len(recorder._configuration.publishers) == 1
+            assert recorder._configuration.publishers[0] is mock_publisher
             assert recorder._configuration.version == 2
 
 

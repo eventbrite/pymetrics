@@ -4,15 +4,11 @@ from __future__ import (
 )
 
 import copy
-import functools
 from typing import (
     Any,
     Dict,
     List,
     Optional,
-    Type,
-    Union,
-    cast,
 )
 
 import attr
@@ -20,7 +16,6 @@ from conformity import (
     fields,
     validator,
 )
-from conformity.error import ValidationError
 import six
 
 from pymetrics.publishers.base import MetricsPublisher
@@ -33,46 +28,21 @@ __all__ = (
 )
 
 
-_StringField = fields.UnicodeString  # type: Union[Type[fields.UnicodeString], Type[fields.Any]]
-if six.PY2:
-    # noinspection PyTypeChecker
-    _StringField = cast(Type[Any], functools.partial(fields.Any, fields.UnicodeString(), fields.ByteString()))
-
-
-_enable_meta_metrics = fields.Boolean(
-    description='If true, meta-metrics will be recorded documenting the performance of PyMetrics itself.',
-)
-
-_error_logger_name = _StringField(
-    description='By default, errors encountered when publishing metrics are suppressed and lost. If this value is'
-                'truthy, a Logger is created with this name and used to log publication errors.',
-)
-
 CONFIGURATION_SCHEMA = fields.Polymorph(
     switch_field='version',
     contents_map={
-        1: fields.Dictionary(
-            {
-                'version': fields.Constant(1),
-                'enable_meta_metrics': _enable_meta_metrics,
-                'error_logger_name': _error_logger_name,
-                'publishers': fields.Sequence(
-                    fields.Dictionary(
-                        {'class': _StringField(description='The import path of the publisher.')},
-                        allow_extra_keys=True,
-                        description='Import path and arguments for a publisher.',
-                    ),
-                    min_length=1,
-                    description='The configuration for all publishers.',
-                ),
-            },
-            optional_keys=('enable_meta_metrics', 'error_logger_name'),
-        ),
         2: fields.Dictionary(
             {
                 'version': fields.Constant(2),
-                'enable_meta_metrics': _enable_meta_metrics,
-                'error_logger_name': fields.UnicodeString(description=_error_logger_name.description),
+                'enable_meta_metrics': fields.Boolean(
+                    description='If true, meta-metrics will be recorded documenting the performance of '
+                                'PyMetrics itself.',
+                ),
+                'error_logger_name': fields.UnicodeString(
+                    description='By default, errors encountered when publishing metrics are suppressed and lost. If '
+                                'this value is truthy, a Logger is created with this name and used to log publication '
+                                'errors.',
+                ),
                 'publishers': fields.Sequence(
                     fields.ClassConfigurationSchema(
                         base_class=MetricsPublisher,
@@ -136,21 +106,6 @@ def create_configuration(config_dict):  # type: (Dict[six.text_type, Any]) -> Co
     )
 
     for publisher in config_dict['publishers']:
-        if configuration.version == 1:
-            try:
-                publisher_class = fields.TypePath.resolve_python_path(publisher['class'])
-            except (ValueError, ImportError, AttributeError) as e:
-                raise ValidationError('Could not import publisher {path}: {error}'.format(
-                    path=publisher['class'],
-                    error=e.args[0],
-                ))
-            params = copy.deepcopy(publisher)
-            del params['class']
-            configuration.publishers.append(publisher_class(**params))
-
-        else:
-            configuration.publishers.append(
-                publisher['object'](**publisher.get('kwargs', {})),
-            )
+        configuration.publishers.append(publisher['object'](**publisher.get('kwargs', {})))
 
     return configuration
