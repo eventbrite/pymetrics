@@ -1,6 +1,10 @@
 Changelog
 =========
 
+1.0.0 (2019-11-22)
+------------------
+- [MAJOR] Remove legacy configuration format version 1
+
 0.21.5 (2019-11-01)
 -------------------
 - [PATCH] Add support for Python 3.8
