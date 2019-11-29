@@ -3,6 +3,8 @@ from __future__ import (
     unicode_literals,
 )
 
+from collections import deque
+from functools import partial
 import time
 from typing import (
     Any,
@@ -42,6 +44,8 @@ __all__ = (
 
 
 M = TypeVar('M', bound=Metric)
+
+MAX_METRICS_TO_TRACK = 100
 
 
 @fields.ClassConfigurationSchema.provider(fields.Dictionary(
@@ -132,12 +136,22 @@ class DefaultMetricsRecorder(MetricsRecorder):
 
         return self.counters[internal_name]
 
+    def _create_new_metrics_collection_container(self):
+        if self._configuration:
+            max_metrics_to_track = getattr(self._configuration, 'max_metrics_to_track', MAX_METRICS_TO_TRACK)
+        else:
+            max_metrics_to_track = MAX_METRICS_TO_TRACK
+
+        return deque(maxlen=max_metrics_to_track)
+        # return list()
+
     def _get_metric_from_list_or_create(self, collection, name, force_new, metric, initial_value, **kwargs):
         # type: (Dict[six.text_type, List[M]], six.text_type, bool, Type[M], int, **Any) -> M
         name, internal_name = self._get_name(name, kwargs)
 
         if internal_name not in collection:
-            collection[internal_name] = [metric(name, initial_value=initial_value, **kwargs)]
+            collection[internal_name] = self._create_new_metrics_collection_container()
+            collection[internal_name].append(metric(name, initial_value=initial_value, **kwargs))
             self.unpublished_metrics_count += 1
 
         elif force_new or collection[internal_name][-1].value is not None:
