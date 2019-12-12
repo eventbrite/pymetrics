@@ -1,6 +1,10 @@
 Changelog
 =========
 
+1.0.1 (2019-12-11)
+------------------
+- [PATCH] Fix setup.cfg wheel config to build proper wheel
+
 1.0.0 (2019-11-22)
 ------------------
 - [MAJOR] Remove legacy configuration format version 1
