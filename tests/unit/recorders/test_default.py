@@ -12,8 +12,10 @@ from typing import (
 )
 
 from conformity import fields
+from conformity.error import ValidationError
 import freezegun
 import mock
+import pytest
 import six
 
 from pymetrics.instruments import (
@@ -79,6 +81,52 @@ class TestDefaultMetricsRecorderConfiguration(object):
 
         # re-config should do nothing
         recorder.configure({'bad_config': 'bad_value'})
+
+    def test_config_django_causes_conformity_import_error(self):
+        django_exceptions = mock.MagicMock()
+        django_exceptions.ImproperlyConfigured = FakeImproperlyConfigured
+
+        django_conf = mock.MagicMock()
+        e = ValidationError(
+            "Invalid keyword arguments:\n  - middleware.0.path: ImportError: cannot import name 'baz' from 'foo.bar' "
+        )
+        if six.PY2:
+            django_conf.settings.__nonzero__.side_effect = e
+        else:
+            django_conf.settings.__bool__.side_effect = e
+
+        with mock.patch.dict('sys.modules', {
+            'django': mock.MagicMock(),
+            'django.conf': django_conf,
+            'django.core': mock.MagicMock(),
+            'django.core.exceptions': django_exceptions,
+        }):
+            recorder = DefaultMetricsRecorder('me')
+
+        assert recorder.is_configured is False
+
+    def test_config_django_causes_conformity_other_error(self):
+        django_exceptions = mock.MagicMock()
+        django_exceptions.ImproperlyConfigured = FakeImproperlyConfigured
+
+        django_conf = mock.MagicMock()
+        e = ValidationError(
+            "Invalid keyword arguments:\n  - middleware.0.path: Some other error that isn't an import error "
+        )
+        if six.PY2:
+            django_conf.settings.__nonzero__.side_effect = e
+        else:
+            django_conf.settings.__bool__.side_effect = e
+
+        with mock.patch.dict('sys.modules', {
+            'django': mock.MagicMock(),
+            'django.conf': django_conf,
+            'django.core': mock.MagicMock(),
+            'django.core.exceptions': django_exceptions,
+        }), pytest.raises(ValidationError) as error_context:
+            DefaultMetricsRecorder('me')
+
+        assert error_context.value is e
 
     def test_config_django_available_but_settings_broken1(self):
         django_exceptions = mock.MagicMock()
