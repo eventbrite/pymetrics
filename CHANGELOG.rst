@@ -1,6 +1,10 @@
 Changelog
 =========
 
+1.0.2 (2020-03-06)
+------------------
+- [PATCH] Fix #9: Catch circular Django settings import Conformity error
+
 1.0.1 (2019-12-11)
 ------------------
 - [PATCH] Fix setup.cfg wheel config to build proper wheel
