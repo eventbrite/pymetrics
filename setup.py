@@ -45,7 +45,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'attrs>=17.4,<20',
-        'conformity~=1.26,>=1.26.1',
+        'conformity>=1.26.9,!=1.27.0,<2.0',
         'enum34;python_version<"3.4"',
         'six',
         'typing~=3.7.4;python_version<"3.5"',

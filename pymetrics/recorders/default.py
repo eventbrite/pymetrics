@@ -16,6 +16,7 @@ from typing import (
 )
 
 from conformity import fields
+from conformity.error import ValidationError
 import six
 
 from pymetrics.configuration import (
@@ -246,11 +247,16 @@ class DefaultMetricsRecorder(MetricsRecorder):
             try:
                 from django.conf import settings
                 if settings:
-                    # Django won't actually raise ImproperlyConfigured unless you try to _use_ the settings
+                    # Django won't actually raise ImproperlyConfigured unless you try to _use_ the settings.
                     getattr(settings, 'DEBUG', False)
                     cls.django_settings = settings
             except (ImportError, cls.DjangoImproperlyConfigured):
+                # Could be a circular import or problem with settings that might be resolved at a later time.
                 pass
+            except ValidationError as e:
+                # Likely a circular import that will be resolved at a later time.
+                if not (e.args[0] and 'ImportError: ' in e.args[0]):
+                    raise
 
         return cls.django_settings
 
