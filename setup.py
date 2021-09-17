@@ -20,6 +20,20 @@ def readme():
     with codecs.open('README.rst', 'rb', encoding='utf8') as f:
         return f.read()
 
+install_requires = [
+    'attrs>=17.4,<20',
+    'conformity>=1.26.9,!=1.27.0,<2.0',
+    'enum34;python_version<"3.4"',
+    'six',
+    'typing~=3.7.4;python_version<"3.5"',
+    'typing-extensions~=3.7.4;python_version<"3.8"',
+]
+
+mypy_require = [
+    'mypy~=0.740;python_version>"3.4"',
+    'types-six~=0.1.7;python_version>"3.4"',
+    'types-mock~=0.1.3;python_version>"3.4"',
+    ]
 
 tests_require = [
     'freezegun',
@@ -28,8 +42,8 @@ tests_require = [
     'pytest-runner',
     'mock',
     'more-itertools~=5.0',  # We must pin this, because 6.0 requires Python 3.
-    'mypy~=0.740;python_version>"3.4"',
-]
+] + mypy_require
+
 
 setup(
     name='pymetrics',
@@ -43,14 +57,7 @@ setup(
     package_data={str('pymetrics'): [str('py.typed')]},  # PEP 561
     zip_safe=False,  # PEP 561
     include_package_data=True,
-    install_requires=[
-        'attrs>=17.4,<20',
-        'conformity>=1.26.9,!=1.27.0,<2.0',
-        'enum34;python_version<"3.4"',
-        'six',
-        'typing~=3.7.4;python_version<"3.5"',
-        'typing-extensions~=3.7.4;python_version<"3.8"',
-    ],
+    install_requires=install_requires,
     tests_require=tests_require,
     setup_requires=['pytest-runner'] if {'pytest', 'test', 'ptr'}.intersection(sys.argv) else [],
     test_suite='tests',
