@@ -20,6 +20,7 @@ def readme():
     with codecs.open('README.rst', 'rb', encoding='utf8') as f:
         return f.read()
 
+
 install_requires = [
     'attrs>=17.4,<20',
     'conformity>=1.26.9,!=1.27.0,<2.0',
