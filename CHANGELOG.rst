@@ -1,6 +1,10 @@
 Changelog
 =========
 
+1.0.3 (2021-09-20)
+------------------
+- [PATCH] Fix mypy errors
+
 1.0.2 (2020-03-06)
 ------------------
 - [PATCH] Fix #9: Catch circular Django settings import Conformity error
