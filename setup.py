@@ -37,7 +37,7 @@ mypy_require = [
     ]
 
 tests_require = [
-    'freezegun',
+    'freezegun<1.2.0',
     'pytest',
     'pytest-cov',
     'pytest-runner',
