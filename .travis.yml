@@ -33,7 +33,7 @@ matrix:
         - pip install .[testing]
       script:
         - pytest --cov-report term-missing
-        - mypy .
+        - mypy . --exclude=build
     - stage: build
       python: '3.8'
       install:
