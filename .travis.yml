@@ -29,10 +29,13 @@ matrix:
     - stage: build
       python: '3.7'
       install:
+        # We need to use a modern importlib-metadata version or otherwise it won't be compatible with python3.7
+        # https://github.com/pypa/setuptools/issues/3293
         - pip install -U pip setuptools "importlib-metadata~=4.12.0"
         - pip install .[testing]
       script:
         - pytest --cov-report term-missing
+        # In recent versions of setuptools, pip install . creates a "build" directory
         - mypy . --exclude=build
     - stage: build
       python: '3.8'
@@ -41,6 +44,7 @@ matrix:
         - pip install .[testing]
       script:
         - pytest --cov-report term-missing
+        # In recent versions of setuptools, pip install . creates a "build" directory
         - mypy . --exclude=build
     - stage: deploy
       if: tag =~ ^[0-9]+\.[0-9]+\.[0-9]+
