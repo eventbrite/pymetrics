@@ -579,11 +579,11 @@ class TestDefaultMetricsRecorder(object):
             mock_publish.reset_mock()
 
             recorder.unpublished_metrics_count = 1
-            frozen_time.tick(datetime.timedelta(seconds=(9)))
+            frozen_time.tick(datetime.timedelta(seconds=9))
             recorder.publish_if_full_or_old()
             assert mock_publish.call_count == 0
 
-            frozen_time.tick(datetime.timedelta(seconds=(1)))
+            frozen_time.tick(datetime.timedelta(seconds=1))
             recorder.publish_if_full_or_old()
             mock_publish.assert_called_once_with()
             mock_publish.reset_mock()
@@ -592,11 +592,11 @@ class TestDefaultMetricsRecorder(object):
             recorder.publish_if_full_or_old()
             assert mock_publish.call_count == 0
 
-            frozen_time.tick(datetime.timedelta(seconds=(13)))
+            frozen_time.tick(datetime.timedelta(seconds=13))
             recorder.publish_if_full_or_old(max_age=14)
             assert mock_publish.call_count == 0
 
-            frozen_time.tick(datetime.timedelta(seconds=(1)))
+            frozen_time.tick(datetime.timedelta(seconds=1))
             recorder.publish_if_full_or_old()
             mock_publish.assert_called_once_with()
             mock_publish.reset_mock()
@@ -621,11 +621,11 @@ class TestDefaultMetricsRecorder(object):
             recorder.throttled_publish_all()
             assert mock_publish.call_count == 0
 
-            frozen_time.tick(datetime.timedelta(seconds=(9)))
+            frozen_time.tick(datetime.timedelta(seconds=9))
             recorder.throttled_publish_all()
             assert mock_publish.call_count == 0
 
-            frozen_time.tick(datetime.timedelta(seconds=(1)))
+            frozen_time.tick(datetime.timedelta(seconds=1))
             recorder.throttled_publish_all()
             mock_publish.assert_called_once_with()
             mock_publish.reset_mock()
@@ -634,11 +634,11 @@ class TestDefaultMetricsRecorder(object):
             recorder.throttled_publish_all()
             assert mock_publish.call_count == 0
 
-            frozen_time.tick(datetime.timedelta(seconds=(13)))
+            frozen_time.tick(datetime.timedelta(seconds=13))
             recorder.throttled_publish_all(14)
             assert mock_publish.call_count == 0
 
-            frozen_time.tick(datetime.timedelta(seconds=(1)))
+            frozen_time.tick(datetime.timedelta(seconds=1))
             recorder.throttled_publish_all()
             mock_publish.assert_called_once_with()
             mock_publish.reset_mock()
