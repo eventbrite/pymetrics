@@ -37,7 +37,7 @@ mypy_require = [
     ]
 
 tests_require = [
-    'freezegun<1.2.0',  # We must pin freezegun under 1.2 because newer versions use the tick method differently
+    'freezegun',
     'pytest',
     'pytest-cov',
     'pytest-runner',
