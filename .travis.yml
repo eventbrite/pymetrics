@@ -31,7 +31,7 @@ matrix:
       install:
         # We need to use a modern importlib-metadata version or otherwise it won't be compatible with python3.7
         # https://github.com/pypa/setuptools/issues/3293
-        - pip install -U pip setuptools "importlib-metadata~=4.12.0"
+        - pip install -U pip setuptools
         - pip install .[testing]
       script:
         - pytest --cov-report term-missing
