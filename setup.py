@@ -22,7 +22,7 @@ def readme():
 
 
 install_requires = [
-    'attrs>=17.4,<20',
+    'attrs>=17.4,<22',
     'conformity>=1.26.9,!=1.27.0,<2.0',
     'enum34;python_version<"3.4"',
     'six',
@@ -43,6 +43,7 @@ tests_require = [
     'pytest-runner',
     'mock',
     'more-itertools~=5.0',  # We must pin this, because 6.0 requires Python 3.
+    'importlib-metadata',  # We need to explicitly install it to avoid incompatibilities with setuptools
 ] + mypy_require
 
 

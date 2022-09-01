@@ -33,7 +33,8 @@ matrix:
         - pip install .[testing]
       script:
         - pytest --cov-report term-missing
-        - mypy .
+        # In recent versions of setuptools, pip install . creates a "build" directory
+        - mypy . --exclude=build
     - stage: build
       python: '3.8'
       install:
@@ -41,7 +42,8 @@ matrix:
         - pip install .[testing]
       script:
         - pytest --cov-report term-missing
-        - mypy .
+        # In recent versions of setuptools, pip install . creates a "build" directory
+        - mypy . --exclude=build
     - stage: deploy
       if: tag =~ ^[0-9]+\.[0-9]+\.[0-9]+
       python: '3.6'
