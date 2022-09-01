@@ -29,8 +29,6 @@ matrix:
     - stage: build
       python: '3.7'
       install:
-        # We need to use a modern importlib-metadata version or otherwise it won't be compatible with python3.7
-        # https://github.com/pypa/setuptools/issues/3293
         - pip install -U pip setuptools
         - pip install .[testing]
       script:
