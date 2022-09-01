@@ -1,6 +1,10 @@
 Changelog
 =========
 
+1.0.4 (2022-09-01)
+------------------
+- [PATCH] Update attrs dependency (#12)
+
 1.0.3 (2021-09-20)
 ------------------
 - [PATCH] Fix mypy errors
