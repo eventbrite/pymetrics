@@ -43,7 +43,6 @@ tests_require = [
     'pytest-runner',
     'mock',
     'more-itertools~=5.0',  # We must pin this, because 6.0 requires Python 3.
-    'importlib-metadata~=5.0',  # We need to explicitly install it to avoid incompatibilities with setuptools
 ] + mypy_require
 
 
