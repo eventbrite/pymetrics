@@ -21,7 +21,7 @@ import six
 try:
     from typing import Literal  # type: ignore
 except ImportError:
-    from typing_extensions import Literal # type: ignore
+    from typing_extensions import Literal  # type: ignore
 
 
 __all__ = (

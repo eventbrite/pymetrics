@@ -8,7 +8,7 @@ from __future__ import (
 import codecs
 import sys
 
-from setuptools import ( # type: ignore
+from setuptools import (  # type: ignore
     find_packages,
     setup,
 )
