@@ -8,7 +8,7 @@ from __future__ import (
 import codecs
 import sys
 
-from setuptools import (
+from setuptools import (  # type: ignore
     find_packages,
     setup,
 )
@@ -43,7 +43,7 @@ tests_require = [
     'pytest-runner',
     'mock',
     'more-itertools~=5.0',  # We must pin this, because 6.0 requires Python 3.
-    'importlib-metadata',  # We need to explicitly install it to avoid incompatibilities with setuptools
+    'importlib-metadata~=5.0;python_version>"3.6"'
 ] + mypy_require
 
 

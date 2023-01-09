@@ -236,7 +236,7 @@ class DefaultMetricsRecorder(MetricsRecorder):
             # Only attempt to import Django a single time; if it can't be imported once, it'll never import successfully
             cls.attempted_django_exception_import = True
             try:
-                from django.core.exceptions import ImproperlyConfigured
+                from django.core.exceptions import ImproperlyConfigured  # type: ignore
                 cls.DjangoImproperlyConfigured = ImproperlyConfigured
             except ImportError:
                 pass
@@ -245,7 +245,7 @@ class DefaultMetricsRecorder(MetricsRecorder):
             # If the settings haven't been imported yet, but we do have the real Django exception, keep trying to
             # import settings, in case they're improperly configured initially but aren't later.
             try:
-                from django.conf import settings
+                from django.conf import settings  # type: ignore
                 if settings:
                     # Django won't actually raise ImproperlyConfigured unless you try to _use_ the settings.
                     getattr(settings, 'DEBUG', False)
