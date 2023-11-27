@@ -1,6 +1,10 @@
 Changelog
 =========
 
+1.0.9 (2023-11-27)
+------------------
+- [PATCH] Install requires typing-extensions
+
 1.0.4 (2022-09-01)
 ------------------
 - [PATCH] Update attrs dependency (#12)
