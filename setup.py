@@ -27,13 +27,13 @@ install_requires = [
     'enum34;python_version<"3.4"',
     'six',
     'typing~=3.7.4;python_version<"3.5"',
+    'typing-extensions~=3.10;python_version<"3.8"',
 ]
 
 mypy_require = [
     'mypy~=0.740;python_version>"3.4"',
     'types-six~=0.1.7;python_version>"3.4"',
     'types-mock~=0.1.3;python_version>"3.4"',
-    'typing-extensions~=3.10;python_version<"3.8"',
     ]
 
 tests_require = [
