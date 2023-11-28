@@ -1,6 +1,11 @@
 Changelog
 =========
 
+1.0.10 (2023-11-28)
+-------------------
+- [PATCH] Use Ubuntu 20 for newer OpenSSL
+- [PATCH] Use PRs for releases since default branch is protected now
+
 1.0.9 (2023-11-27)
 ------------------
 - [PATCH] Install requires typing-extensions
