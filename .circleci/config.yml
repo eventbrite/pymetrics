@@ -1,0 +1,134 @@
+  version: 2.1
+
+  orbs:
+    slack: circleci/slack@4.1.3
+
+  executors:
+    small-docker:
+      docker:
+        - image: 353605023268.dkr.ecr.us-east-1.amazonaws.com/ci_cd:latest
+          aws_auth:
+            aws_access_key_id: $ECR35_AWS_ACCESS_KEY_ID
+            aws_secret_access_key: $ECR35_AWS_SECRET_ACCESS_KEY
+      resource_class: small
+
+  common-job-envs: &common-job-envs
+    DOCKER_BUILDKIT: 1
+    COMPOSE_DOCKER_CLI_BUILD: 1
+
+  remote-docker-version: &remote-docker-version
+    version: 20.10.24
+
+  docker-ecr-login: &docker-ecr-login
+    name: Login docker to prod and dev ECR repositories
+    command: |
+        aws --profile=dev ecr get-login-password |  docker login -u AWS  --password-stdin https://353605023268.dkr.ecr.us-east-1.amazonaws.com
+        aws --profile=prod ecr get-login-password |  docker login -u AWS  --password-stdin https://552131502238.dkr.ecr.us-east-1.amazonaws.com
+
+  generate-codeartifact-token: &generate-codeartifact-token
+    name: Generate temporary CodeArtifact Token to /tmp/.codeartifact
+    command: |
+        CODEARTIFACT_AUTH_TOKEN=$(aws --profile=dev codeartifact get-authorization-token --domain eventbrite-shared --domain-owner 353605023268 --query authorizationToken --output text)
+        echo "export CODEARTIFACT_AUTH_TOKEN=${CODEARTIFACT_AUTH_TOKEN}" >> $BASH_ENV
+  jobs:
+    invoke-release:
+      executor:
+        name: small-docker
+      steps:
+        - checkout
+        - setup_remote_docker:
+            <<: *remote-docker-version
+        - run:
+            name: Configure "prod" and "dev" AWS Profiles
+            command: /srv/ci_cd/configure_prod_dev_aws_profiles/main.sh
+        - run:
+            <<: *docker-ecr-login
+        - add_ssh_keys:
+            fingerprints:
+              - "SHA256:xx6xBt/G0eXCs5IauNK/Gd4VAMM36Ky1/gnf/YkBaDI"
+        - run:
+            name: Git Config
+            command: /srv/ci_cd/git_config/main.sh
+        - run:
+            name: Release
+            command: |
+              /srv/ci_cd/release/main.sh \
+              --github-token=${GITHUB_TOKEN} \
+              --pull-request-url ${CIRCLE_PULL_REQUEST} \
+              --branch ${CIRCLE_BRANCH} \
+              --aws-access-key-id ${ECR35_AWS_ACCESS_KEY_ID} \
+              --aws-secret-access-key ${ECR35_AWS_SECRET_ACCESS_KEY} \
+              --publish-release-wheel=py312
+    test:
+      executor:
+        name: small-docker
+      parameters:
+        validate_pr:
+          type: boolean
+          default: true
+      environment:
+        <<: *common-job-envs
+      steps:
+        - run:
+            name: Configure "prod" and "dev" AWS Profiles
+            command: /srv/ci_cd/configure_prod_dev_aws_profiles/main.sh
+        - when:
+            condition: << parameters.validate_pr >>
+            steps:
+              - run:
+                  name: Check semantic version
+                  command: |
+                    /srv/ci_cd/check_semantic_version/main.sh \
+                    --github-token=${GITHUB_TOKEN} \
+                    --pull-request-url ${CIRCLE_PULL_REQUEST}
+              - run:
+                  name: Check cherry pick branch
+                  command: |
+                    /srv/ci_cd/check_cherry_pick_branch/main.sh \
+                    --branch ${CIRCLE_BRANCH} \
+                    --github-token=${GITHUB_TOKEN} \
+                    --pull-request-url ${CIRCLE_PULL_REQUEST}
+        - checkout
+        - setup_remote_docker:
+            <<: *remote-docker-version
+        - run:
+            <<: *docker-ecr-login
+        - run:
+            <<: *generate-codeartifact-token
+        - run:
+            name: Create test reports directory
+            command: mkdir /tmp/test-results
+        - run:
+            name: Build image and Run tests
+            command: |
+              echo "export STEP=\"Run tests\"" >> $BASH_ENV
+              sh tox.sh
+        - store_test_results:
+            path: /tmp/test-results
+        - store_artifacts:
+            path: /tmp/test-artifacts
+            destination: Test Result
+
+  workflows:
+    version: 2
+    invoke-release-pull-request:
+      jobs:
+        - invoke-release:
+            context:
+              - 'DevTools ECR'
+              - 'Prod AWS'
+            filters:
+              branches:
+                only: /^invoke-release-.*-[0-9]+\.[0-9]+\.[0-9]+$/
+    pull-request:
+      jobs:
+        - test:
+            name: test-pull-request
+            context:
+              - 'DevTools ECR'
+              - 'Prod AWS'
+            filters:
+              branches:
+                ignore:
+                  - main
+                  - /^invoke-release-.*-[0-9]+\.[0-9]+\.[0-9]+$/

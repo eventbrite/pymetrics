@@ -33,8 +33,9 @@ classifiers = [
 requires-python = ">=3.7"
 dependencies = [
     "attrs>=17.4,<22",
-    "conformity>=1.28.2,<2.0",
+    "conformity>=2.0.0,<=3.0.0",
     "six",
+    "sphinx>=2.2,<3.0",
 ]
 
 [project.optional-dependencies]
@@ -59,7 +60,6 @@ Homepage = "https://github.com/eventbrite/pymetrics"
 Documentation = "https://pymetrics.readthedocs.io"
 Repository = "https://github.com/eventbrite/pymetrics"
 Issues = "https://github.com/eventbrite/pymetrics/issues"
-CI = "https://travis-ci.org/eventbrite/pymetrics/"
 
 [tool.setuptools.packages.find]
 include = ["pymetrics", "pymetrics.*"]
