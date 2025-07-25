@@ -1,12 +1,7 @@
-from __future__ import (
-    absolute_import,
-    unicode_literals,
-)
-
 from typing import Iterable
 
-from pymetrics.configuration import Configuration
 from pymetrics.instruments import Metric
+from pymetrics.publishers.base import MetricsPublisher
 
 
 __all__ = (
@@ -14,13 +9,13 @@ __all__ = (
 )
 
 
-def publish_metrics(metrics, configuration):  # type: (Iterable[Metric], Configuration) -> None
+def publish_metrics(metrics, configuration):
+    # type: (Iterable[Metric], object) -> None
     """
-    Publish a set of metrics via the set of configured publishers.
+    Publish metrics using the given configuration.
 
     :param metrics: The metrics to publish
-    :param configuration: The configuration object containing the configured publishers
+    :param configuration: The configuration object
     """
-
     for publisher in configuration.publishers:
-        publisher.publish(metrics, configuration.error_logger_name, configuration.enable_meta_metrics)
+        publisher.publish(metrics)

@@ -1,19 +1,20 @@
-from __future__ import (
-    absolute_import,
-    unicode_literals,
-)
+from typing import Iterable
 
-from conformity import fields
-
+from pymetrics.instruments import Metric
 from pymetrics.publishers.base import MetricsPublisher
 
 
-__all__ = (
-    'NullPublisher',
-)
+class NullMetricsPublisher(MetricsPublisher):
+    """
+    A null metrics publisher that does nothing.
+    """
 
+    def publish(self, metrics, flush=True):
+        # type: (Iterable[Metric], bool) -> None
+        """
+        Do nothing with the metrics.
 
-@fields.ClassConfigurationSchema.provider(fields.Dictionary({}))
-class NullPublisher(MetricsPublisher):
-    def publish(self, metrics, error_logger=None, enable_meta_metrics=False):
-        """Does nothing"""
+        :param metrics: The metrics to publish (ignored)
+        :param flush: Whether to flush (ignored)
+        """
+        pass

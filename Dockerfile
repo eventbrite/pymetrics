@@ -1,33 +1,31 @@
-FROM ubuntu:16.04
+FROM ubuntu:22.04
 
 RUN apt-get update && \
     apt-get install -y \
         git \
         pkg-config \
         software-properties-common \
-        wget
-RUN add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update && \
-    apt-get install -y \
-        python2.7 \
-        python2.7-dev \
-        python3.4 \
-        python3.4-dev \
-        python3.5 \
-        python3.5-dev \
-        python3.6 \
-        python3.6-dev \
-        python3.7 \
-        python3.7-dev \
-        python3.8 \
-        python3.8-distutils \
-        python3.8-dev
-RUN wget https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py && \
-    python3.7 /tmp/get-pip.py && \
-    python3.7 -m pip install tox
+        wget \
+        python3.12 \
+        python3.12-dev \
+        python3.12-distutils \
+        python3.12-venv \
+        python3-pip
+
+# Set Python 3.12 as default
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1
+
+# Install pip for Python 3.12
+RUN python3.12 -m ensurepip --upgrade && \
+    python3.12 -m pip install --upgrade pip
+
+# Install tox
+RUN python3.12 -m pip install tox
 
 WORKDIR /test/pymetrics
 
-CMD ["tox"]
+# Copy the project files
+COPY . /test/pymetrics
 
-ADD . /test/pymetrics
+CMD ["tox"]

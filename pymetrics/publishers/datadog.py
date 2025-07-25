@@ -1,19 +1,4 @@
-from __future__ import (
-    absolute_import,
-    unicode_literals,
-)
-
-from typing import (
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Union,
-    cast,
-)
-
-from conformity import fields
-import six
+from typing import Dict, Iterable, List, Optional, Union
 
 from pymetrics.instruments import (
     Counter,
@@ -27,49 +12,6 @@ from pymetrics.instruments import (
 from pymetrics.publishers.statsd import StatsdPublisher
 
 
-__all__ = (
-    'DogStatsdPublisher',
-)
-
-
-_datadog_tags_value_type = fields.Nullable(
-    fields.Any(fields.UnicodeString(), fields.ByteString(), fields.Integer(), fields.Float(), fields.Boolean()),
-)
-
-
-@fields.ClassConfigurationSchema.provider(fields.Dictionary(
-    {
-        'host': fields.UnicodeString(
-            description='The host name or IP address on which the Dogstatsd server is listening',
-        ),
-        'port': fields.Integer(description='The port number on which the Dogstatsd server is listening'),
-        'maximum_packet_size': fields.Integer(
-            description='The maximum packet size to send (packets will be fragmented above this limit), defaults to '
-                        '8000 bytes.',
-        ),
-        'network_timeout': fields.Any(fields.Float(gt=0.0), fields.Integer(gt=0), description='The network timeout'),
-        'global_tags': fields.SchemalessDictionary(
-            key_type=fields.UnicodeString(),
-            value_type=_datadog_tags_value_type,
-            description='Datadog tags to apply to all published metrics.',
-        ),
-        'extra_gauge_tags': fields.SchemalessDictionary(
-            key_type=fields.UnicodeString(),
-            value_type=_datadog_tags_value_type,
-            description='Extra datadog tags, in addition to `global_tags` if applicable, to apply to all published '
-                        'gauges. This is necessary when multiple processes are simultaneously publishing gauges with '
-                        'the same name and you need to create charts or monitors that sum the values of all of these '
-                        'gauges across all processes (because Datadog does not support identical distributed gauge '
-                        'names+tags and will eliminate duplicates).',
-        ),
-        'use_distributions': fields.Boolean(
-            description='Whether to publish histograms and timers as Datadog distributions. For more information '
-                        'about Datadog distributions, see https://docs.datadoghq.com/graphing/metrics/distributions/.'
-                        'Defaults to `False`.',
-        ),
-    },
-    optional_keys=('maximum_packet_size', 'network_timeout', 'global_tags', 'extra_gauge_tags', 'use_distributions'),
-))
 class DogStatsdPublisher(StatsdPublisher):
     """
     A special version of the Statsd publisher than understands the DataDog extensions to the Statsd protocol
@@ -90,106 +32,111 @@ class DogStatsdPublisher(StatsdPublisher):
 
     def __init__(
         self,
-        host,  # type: six.text_type
+        host,  # type: str
         port,  # type: int
         network_timeout=0.5,  # type: Union[int, float]
-        global_tags=None,  # type: Dict[six.text_type, Tag]
-        extra_gauge_tags=None,  # type: Dict[six.text_type, Tag]
+        global_tags=None,  # type: Dict[str, Tag]
+        extra_gauge_tags=None,  # type: Dict[str, Tag]
         use_distributions=False,  # type: bool
         maximum_packet_size=MAXIMUM_PACKET_SIZE,  # type: int
     ):
-        # type: (...) -> None
+        """
+        Initialize the publisher.
+
+        :param host: The host name or IP address on which the Dogstatsd server is listening
+        :param port: The port number on which the Dogstatsd server is listening
+        :param network_timeout: The network timeout
+        :param global_tags: Datadog tags to apply to all published metrics
+        :param extra_gauge_tags: Extra datadog tags to apply to all published gauges
+        :param use_distributions: Whether to publish histograms and timers as Datadog distributions
+        :param maximum_packet_size: The maximum packet size to send
+        """
         super(DogStatsdPublisher, self).__init__(host, port, network_timeout, maximum_packet_size)
 
-        if global_tags and not isinstance(global_tags, dict):
-            raise ValueError('Global tags must be dicts')
-        if extra_gauge_tags and not isinstance(extra_gauge_tags, dict):
-            raise ValueError('Extra gauge tags must be dicts')
+        self.global_tags = global_tags or {}
+        self.extra_gauge_tags = extra_gauge_tags or {}
+        self.use_distributions = use_distributions
 
-        self._global_tags_string = self._generate_tag_string(global_tags)
-        self._global_gauge_tags_string = self._generate_tag_string(extra_gauge_tags, self._global_tags_string)
-
-        if use_distributions:
+        if self.use_distributions:
             self._metric_type_histogram = self.METRIC_TYPE_DISTRIBUTION
             self._metric_type_timer = self.METRIC_TYPE_DISTRIBUTION
 
     @classmethod
     def _generate_tag_string(
         cls,
-        tags,  # type: Optional[Dict[six.text_type, Tag]]
-        existing_tags_string=b'',  # type: six.binary_type
+        tags,  # type: Optional[Dict[str, Tag]]
+        existing_tags_string=b'',  # type: bytes
     ):
-        # type: (...) -> six.binary_type
+        # type: (...) -> bytes
+        """
+        Generate a tag string for Datadog.
+
+        :param tags: The tags to format
+        :param existing_tags_string: Existing tag string to append to
+        :return: The formatted tag string
+        """
         if not tags:
             return existing_tags_string
 
-        if existing_tags_string:
-            tags_string = existing_tags_string
-            first = False
-        else:
-            tags_string = b'|#'
-            first = True
-
-        for tag, value in six.iteritems(tags):
-            value_string = b''
-            if value is not None:
-                if isinstance(value, six.integer_types):
-                    value_string = b':%d' % value
-                elif isinstance(value, float):
-                    value_string = (b':%f' % value).rstrip(b'0')
-                else:
-                    value_string = b':%s' % cls._get_binary_value(value)
-            if first:
-                tags_string += b'%s%s' % (cls._get_binary_value(tag), value_string)
-                first = False
+        tag_strings = []
+        for tag, value in tags.items():
+            if isinstance(value, int):
+                tag_strings.append(f"{tag}:{value}")
+            elif isinstance(value, float):
+                tag_strings.append(f"{tag}:{value}")
+            elif isinstance(value, bool):
+                tag_strings.append(f"{tag}:{str(value).lower()}")
             else:
-                tags_string += b',%s%s' % (cls._get_binary_value(tag), value_string)
+                # Convert to string
+                tag_strings.append(f"{tag}:{value}")
 
-        return tags_string
+        if tag_strings:
+            tag_string = '|#{}'.format(','.join(tag_strings))
+            return existing_tags_string + tag_string.encode('utf-8')
+
+        return existing_tags_string
 
     def get_formatted_metrics(self, metrics, enable_meta_metrics=False):
-        # type: (Iterable[Metric], bool) -> List[six.binary_type]
-        meta_timer = None
-        if enable_meta_metrics:
-            meta_timer = Timer('', resolution=TimerResolution.MICROSECONDS)
+        # type: (Iterable[Metric], bool) -> List[bytes]
+        """
+        Format metrics for DogStatsd.
 
+        :param metrics: The metrics to format
+        :param enable_meta_metrics: Whether to enable meta-metrics
+        :return: A list of formatted metric bytes
+        """
         formatted_metrics = []
         for metric in metrics:
             if metric.value is None:
                 continue
 
-            existing_tags_string = self._global_tags_string
-
+            # Determine metric type
             if isinstance(metric, Counter):
-                type_label = self.METRIC_TYPE_COUNTER
+                metric_type = self.METRIC_TYPE_COUNTER
             elif isinstance(metric, Gauge):
-                type_label = self.METRIC_TYPE_GAUGE
-                existing_tags_string = self._global_gauge_tags_string
-            elif isinstance(metric, Timer):
-                type_label = self._metric_type_timer
-            elif isinstance(metric, Histogram):
-                type_label = self._metric_type_histogram
+                metric_type = self.METRIC_TYPE_GAUGE
+            elif isinstance(metric, (Histogram, Timer)):
+                metric_type = self._metric_type_histogram
             else:
                 continue
 
-            metric_tags_string = self._generate_tag_string(metric.tags, existing_tags_string)
+            # Build tags
+            tags = {}
+            tags.update(self.global_tags)
+            if isinstance(metric, Gauge) and self.extra_gauge_tags:
+                tags.update(self.extra_gauge_tags)
+            if hasattr(metric, 'tags') and metric.tags:
+                tags.update(metric.tags)
 
-            formatted_metrics.append(
-                b'%s:%d|%s%s' % (self._get_binary_value(metric.name), metric.value, type_label, metric_tags_string)
-            )
+            # Format the metric
+            metric_str = f"{metric.name}:{metric.value}|{metric_type.decode('utf-8')}"
+            formatted_metric = metric_str.encode('utf-8')
 
-        if not formatted_metrics:
-            return []
+            # Add tags if any
+            if tags:
+                tag_string = self._generate_tag_string(tags)
+                formatted_metric += tag_string
 
-        if meta_timer:
-            meta_timer.stop()
-            formatted_metrics.insert(
-                0,
-                b'pymetrics.meta.publish.statsd.format_metrics:%d|%s%s' % (
-                    cast(int, meta_timer.value),
-                    self._metric_type_timer,
-                    self._global_tags_string,
-                ),
-            )
+            formatted_metrics.append(formatted_metric)
 
         return formatted_metrics

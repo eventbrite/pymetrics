@@ -1,71 +1,74 @@
-from __future__ import (
-    absolute_import,
-    unicode_literals,
-)
+from typing import List
 
-from conformity import fields
-import six
-
-from pymetrics.instruments import (
-    Counter,
-    Gauge,
-    Histogram,
-    Tag,
-    Timer,
-    TimerResolution,
-)
+from pymetrics.instruments import Counter, Gauge, Histogram, Metric, Timer, TimerResolution
 from pymetrics.recorders.base import MetricsRecorder
 
 
-__all__ = (
-    'NonOperationalMetricsRecorder',
-    'noop_metrics',
-)
-
-
-@fields.ClassConfigurationSchema.provider(fields.Dictionary(
-    {},
-    allow_extra_keys=False,
-    description='The no-ops recorder has no constructor arguments.',
-))
-class NonOperationalMetricsRecorder(MetricsRecorder):
+class NoopMetricsRecorder(MetricsRecorder):
     """
-    A special metrics recorder that ignores configuration and doesn't keep track of or publish any metrics, useful for
-    testing and defaulting a metrics variable to eliminate conditional metrics recording.
+    A no-op implementation of a metrics recorder that does nothing.
     """
 
-    def counter(self, name, initial_value=0, **tags):
-        # type: (six.text_type, int, **Tag) -> Counter
-        return Counter(name, initial_value, **tags)
+    def record_counter(self, name, value=1, **tags):
+        # type: (str, int, **Tag) -> Counter
+        """
+        Record a counter metric (no-op).
 
-    def histogram(self, name, force_new=False, initial_value=0, **tags):
-        # type: (six.text_type, bool, int, **Tag) -> Histogram
-        return Histogram(name, initial_value, **tags)
+        :param name: The name of the counter
+        :param value: The value to increment by
+        :param tags: Additional tags for the counter
 
-    def timer(self, name, force_new=False, resolution=TimerResolution.MILLISECONDS, initial_value=0, **tags):
-        # type: (six.text_type, bool, TimerResolution, int, **Tag) -> Timer
-        return Timer(name, initial_value, resolution, **tags)
+        :return: A dummy counter instance
+        """
+        return Counter(name, 0, **tags)
 
-    def gauge(self, name, force_new=False, initial_value=0, **tags):
-        # type: (six.text_type, bool, int, **Tag) -> Gauge
-        return Gauge(name, initial_value, **tags)
+    def record_histogram(self, name, value, **tags):
+        # type: (str, bool, int, **Tag) -> Histogram
+        """
+        Record a histogram metric (no-op).
 
-    def publish_all(self):
-        # type: () -> None
-        """Does nothing"""
+        :param name: The name of the histogram
+        :param value: The value to record
+        :param tags: Additional tags for the histogram
 
-    def publish_if_full_or_old(self, max_metrics=18, max_age=10):
-        # type: (int, int) -> None
-        """Does nothing"""
+        :return: A dummy histogram instance
+        """
+        return Histogram(name, 0, **tags)
 
-    def throttled_publish_all(self, delay=10):
-        # type: (int) -> None
-        """Does nothing"""
+    def record_timer(self, name, value, resolution=None, **tags):
+        # type: (str, bool, TimerResolution, int, **Tag) -> Timer
+        """
+        Record a timer metric (no-op).
 
-    def clear(self, only_published=False):
-        # type: (bool) -> None
-        """Does nothing"""
+        :param name: The name of the timer
+        :param value: The value to record
+        :param resolution: The resolution to use
+        :param tags: Additional tags for the timer
 
+        :return: A dummy timer instance
+        """
+        if resolution is None:
+            resolution = TimerResolution.MILLISECONDS
+        return Timer(name, 0, resolution, **tags)
 
-noop_metrics = NonOperationalMetricsRecorder()
-"""A singleton instance of `NonOperationalMetricsRecorder`."""
+    def record_gauge(self, name, value, **tags):
+        # type: (str, bool, int, **Tag) -> Gauge
+        """
+        Record a gauge metric (no-op).
+
+        :param name: The name of the gauge
+        :param value: The value to set
+        :param tags: Additional tags for the gauge
+
+        :return: A dummy gauge instance
+        """
+        return Gauge(name, 0, **tags)
+
+    def get_metrics(self):
+        # type: () -> List[Metric]
+        """
+        Get all recorded metrics (always empty for no-op recorder).
+
+        :return: An empty list
+        """
+        return []

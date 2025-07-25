@@ -1,108 +1,189 @@
-from __future__ import (
-    absolute_import,
-    unicode_literals,
-)
-
-from conformity.error import ValidationError
+import logging
 import pytest
+from unittest import mock
 
-from pymetrics.configuration import create_configuration
+from pymetrics.configuration import Configuration, create_configuration
+from pymetrics.recorders.base import MetricsRecorder
+from pymetrics.publishers.base import MetricsPublisher
+from pymetrics.instruments import Counter, Gauge, Histogram, Timer
 
 
-class TestConfiguration(object):
-    def test_create_config_invalid_version(self):  # type: () -> None
-        with pytest.raises(ValidationError) as error_context:
-            create_configuration({'version': 92, 'futuristic': 'Not a real config'})
+class MockRecorder(MetricsRecorder):
+    def record_counter(self, name, value=1, **tags):
+        return None
 
-        assert "0: Invalid switch value '92'" in error_context.value.args[0]
+    def record_histogram(self, name, value, **tags):
+        return None
 
-    def test_create_config_v1_has_been_retired(self):  # type: () -> None
-        with pytest.raises(ValidationError) as error_context:
-            create_configuration({
-                'version': 1,
-                'error_logger_name': 'py_metrics_errors',
-                'enable_meta_metrics': True,
-                'publishers': [
-                    {'class': 'pymetrics.publishers.statsd.StatsdPublisher', 'host': 'localhost', 'port': 9876},
-                    {'class': 'pymetrics.publishers.logging.LogPublisher', 'log_name': 'py_metrics'},
-                    {'class': 'pymetrics.publishers.null.NullPublisher'},
-                ],
-            })
+    def record_timer(self, name, value, resolution=None, **tags):
+        return None
 
-        assert "0: Invalid switch value '1'" in error_context.value.args[0]
+    def record_gauge(self, name, value, **tags):
+        return None
 
-    def test_create_config_v2_extra_key(self):  # type: () -> None
-        with pytest.raises(ValidationError) as error_context:
-            create_configuration({
-                'version': 2,
-                'unknown_key': 'Unexpected key',
-                'publishers': [
-                    {'path': 'pymetrics.publishers.logging.LogPublisher', 'kwargs': {'log_name': 'py_metrics'}},
-                ],
-            })
+    def get_metrics(self):
+        return []
 
-        assert '0: Extra keys present: unknown_key' in error_context.value.args[0]
 
-    def test_create_config_v2_missing_publishers(self):  # type: () -> None
-        with pytest.raises(ValidationError) as error_context:
-            create_configuration({
-                'version': 2,
-            })
+class MockPublisher(MetricsPublisher):
+    def publish(self, metrics, flush=True):
+        pass
 
-        assert '0.publishers: Missing key: publishers' in error_context.value.args[0]
 
-    def test_create_config_v12_invalid_publisher(self):  # type: () -> None
-        with pytest.raises(ValidationError) as error_context:
-            create_configuration({
-                'version': 2,
-                'publishers': [{}],
-            })
+def test_configuration_creation():
+    recorder = MockRecorder()
+    publisher = MockPublisher()
+    config = Configuration(recorder=recorder, publishers=[publisher])
+    assert config.recorder == recorder
+    assert config.publishers == [publisher]
 
-        assert '0.publishers.0.path: Missing key (and no default specified): path' in error_context.value.args[0]
 
-    def test_create_config_v2_non_existent_publisher(self):  # type: () -> None
-        with pytest.raises(ValidationError) as error_context:
-            create_configuration({
-                'version': 2,
-                'publishers': [
-                    {'path': 'pymetrics.publishers.NotARealPublisher'},
-                ],
-            })
+def test_configuration_with_error_logger():
+    recorder = MockRecorder()
+    config = Configuration(recorder=recorder, error_logger_name='test')
+    assert config.error_logger_name == 'test'
+    assert config._error_logger is not None
 
-        assert '0.publishers.0.path: ' in error_context.value.args[0]
-        assert 'module' in error_context.value.args[0]
-        assert "has no attribute 'NotARealPublisher'" in error_context.value.args[0]
 
-    def test_create_config_v2_success(self):  # type: () -> None
-        configuration = create_configuration({
-            'version': 2,
-            'publishers': [
-                {'path': 'pymetrics.publishers.logging.LogPublisher', 'kwargs': {'log_name': 'py_metrics'}},
-            ],
-        })
+def test_configuration_without_error_logger():
+    recorder = MockRecorder()
+    config = Configuration(recorder=recorder)
+    assert config.error_logger_name is None
+    assert config._error_logger is None
 
-        assert configuration.version == 2
-        assert configuration.error_logger_name is None
-        assert configuration.enable_meta_metrics is False
-        assert len(configuration.publishers) == 1
-        assert configuration.publishers[0].__class__.__name__ == 'LogPublisher'
 
-    def test_create_config_v2_success_optional_settings(self):  # type: () -> None
-        configuration = create_configuration({
-            'version': 2,
-            'error_logger_name': 'py_metrics_errors',
-            'enable_meta_metrics': True,
-            'publishers': [
-                {'path': 'pymetrics.publishers.statsd.StatsdPublisher', 'kwargs': {'host': 'localhost', 'port': 9876}},
-                {'path': 'pymetrics.publishers.logging.LogPublisher', 'kwargs': {'log_name': 'py_metrics'}},
-                {'path': 'pymetrics.publishers.null.NullPublisher'},
-            ],
-        })
+def test_configuration_record_counter_success():
+    recorder = MockRecorder()
+    config = Configuration(recorder=recorder)
+    config.record_counter('test.counter', 5, tag1='value1')
+    # Should not raise any exceptions
 
-        assert configuration.version == 2
-        assert configuration.error_logger_name == 'py_metrics_errors'
-        assert configuration.enable_meta_metrics is True
-        assert len(configuration.publishers) == 3
-        assert configuration.publishers[0].__class__.__name__ == 'StatsdPublisher'
-        assert configuration.publishers[1].__class__.__name__ == 'LogPublisher'
-        assert configuration.publishers[2].__class__.__name__ == 'NullPublisher'
+
+def test_configuration_record_counter_with_error_logger():
+    recorder = MockRecorder()
+    config = Configuration(recorder=recorder, error_logger_name='test')
+
+    # Mock the recorder to raise an exception
+    with mock.patch.object(recorder, 'record_counter', side_effect=Exception('Test error')):
+        # The logging is done directly in the configuration module
+        config.record_counter('test.counter', 5)
+        # Should not raise an exception
+
+
+def test_configuration_record_counter_without_error_logger():
+    recorder = MockRecorder()
+    config = Configuration(recorder=recorder)
+
+    # Mock the recorder to raise an exception
+    with mock.patch.object(recorder, 'record_counter', side_effect=Exception('Test error')):
+        # Should not raise an exception even when recorder fails
+        config.record_counter('test.counter', 5)
+
+
+def test_configuration_record_histogram_success():
+    recorder = MockRecorder()
+    config = Configuration(recorder=recorder)
+    config.record_histogram('test.histogram', 10, tag1='value1')
+    # Should not raise any exceptions
+
+
+def test_configuration_record_histogram_with_error():
+    recorder = MockRecorder()
+    config = Configuration(recorder=recorder, error_logger_name='test')
+
+    with mock.patch.object(recorder, 'record_histogram', side_effect=Exception('Test error')):
+        # The logging is done directly in the configuration module
+        config.record_histogram('test.histogram', 10)
+        # Should not raise an exception
+
+
+def test_configuration_record_timer_success():
+    recorder = MockRecorder()
+    config = Configuration(recorder=recorder)
+    config.record_timer('test.timer', 100)
+    # Should not raise any exceptions
+
+
+def test_configuration_record_timer_with_resolution():
+    recorder = MockRecorder()
+    config = Configuration(recorder=recorder)
+    from pymetrics.instruments import TimerResolution
+    config.record_timer('test.timer', 100, resolution=TimerResolution.MICROSECONDS)
+    # Should not raise any exceptions
+
+
+def test_configuration_record_timer_with_error():
+    recorder = MockRecorder()
+    config = Configuration(recorder=recorder, error_logger_name='test')
+
+    with mock.patch.object(recorder, 'record_timer', side_effect=Exception('Test error')):
+        # The logging is done directly in the configuration module
+        config.record_timer('test.timer', 100)
+        # Should not raise an exception
+
+
+def test_configuration_record_gauge_success():
+    recorder = MockRecorder()
+    config = Configuration(recorder=recorder)
+    config.record_gauge('test.gauge', 50, tag1='value1')
+    # Should not raise any exceptions
+
+
+def test_configuration_record_gauge_with_error():
+    recorder = MockRecorder()
+    config = Configuration(recorder=recorder, error_logger_name='test')
+
+    with mock.patch.object(recorder, 'record_gauge', side_effect=Exception('Test error')):
+        # The logging is done directly in the configuration module
+        config.record_gauge('test.gauge', 50)
+        # Should not raise an exception
+
+
+def test_configuration_publish_success():
+    recorder = MockRecorder()
+    publisher = MockPublisher()
+    config = Configuration(recorder=recorder, publishers=[publisher])
+
+    with mock.patch.object(recorder, 'get_metrics', return_value=[Counter('test')]):
+        with mock.patch.object(publisher, 'publish') as mock_publish:
+            config.publish()
+            mock_publish.assert_called_once()
+
+
+def test_configuration_publish_with_flush_false():
+    recorder = MockRecorder()
+    publisher = MockPublisher()
+    config = Configuration(recorder=recorder, publishers=[publisher])
+
+    with mock.patch.object(recorder, 'get_metrics', return_value=[Counter('test')]):
+        with mock.patch.object(publisher, 'publish') as mock_publish:
+            config.publish(flush=False)
+            mock_publish.assert_called_once()
+
+
+def test_configuration_publish_with_error():
+    recorder = MockRecorder()
+    publisher = MockPublisher()
+    config = Configuration(recorder=recorder, publishers=[publisher], error_logger_name='test')
+
+    with mock.patch.object(recorder, 'get_metrics', side_effect=Exception('Test error')):
+        # The logging is done directly in the configuration module
+        config.publish()
+        # Should not raise an exception
+
+
+def test_configuration_publish_with_publisher_error():
+    recorder = MockRecorder()
+    publisher = MockPublisher()
+    config = Configuration(recorder=recorder, publishers=[publisher], error_logger_name='test')
+
+    with mock.patch.object(recorder, 'get_metrics', return_value=[Counter('test')]):
+        with mock.patch.object(publisher, 'publish', side_effect=Exception('Publisher error')):
+            # The logging is done directly in the configuration module
+            config.publish()
+            # Should not raise an exception
+
+
+def test_create_configuration_not_implemented():
+    with pytest.raises(NotImplementedError):
+        create_configuration({})

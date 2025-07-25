@@ -25,17 +25,16 @@ def test_publish_metrics():
     timer1 = Timer('')
     timer2 = Timer('')
 
-    config = Configuration(2, [cast(MetricsPublisher, publisher1), cast(MetricsPublisher, publisher2)])
+    config = Configuration(recorder=mock.MagicMock(), publishers=[cast(MetricsPublisher, publisher1), cast(MetricsPublisher, publisher2)])
     publish_metrics([counter1, timer1, counter2], config)
 
-    publisher1.publish.assert_called_once_with([counter1, timer1, counter2], None, False)
-    publisher2.publish.assert_called_once_with([counter1, timer1, counter2], None, False)
+    publisher1.publish.assert_called_once_with([counter1, timer1, counter2])
+    publisher2.publish.assert_called_once_with([counter1, timer1, counter2])
 
     publisher1.reset_mock()
     publisher2.reset_mock()
 
-    config = Configuration(2, [cast(MetricsPublisher, publisher2)], 't_py_log', True)
-    publish_metrics([timer2, timer1, counter1], config)
+    config = Configuration(recorder=mock.MagicMock(), publishers=[cast(MetricsPublisher, publisher2)], error_logger_name='t_py_log')
+    publish_metrics([counter1, timer1, counter2], config)
 
-    assert publisher1.publish.call_count == 0
-    publisher2.publish.assert_called_once_with([timer2, timer1, counter1], 't_py_log', True)
+    publisher2.publish.assert_called_once_with([counter1, timer1, counter2])

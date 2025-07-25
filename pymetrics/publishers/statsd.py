@@ -1,20 +1,7 @@
-from __future__ import (
-    absolute_import,
-    unicode_literals,
-)
-
 import errno
 import logging
 import socket
-from typing import (
-    Iterable,
-    List,
-    Union,
-    cast,
-)
-
-from conformity import fields
-import six
+from typing import Iterable, List, Union
 
 from pymetrics.instruments import (
     Counter,
@@ -27,11 +14,6 @@ from pymetrics.instruments import (
 from pymetrics.publishers.base import MetricsPublisher
 
 
-__all__ = (
-    'StatsdPublisher',
-)
-
-
 IP_HEADER_BYTES = 20
 UDP_HEADER_BYTES = 8
 MAX_IPV4_PACKET_SIZE_BYTES = 65535
@@ -42,18 +24,6 @@ MAX_GIG_E_PAYLOAD_SIZE_BYTES = MAX_GIG_E_MTU_BYTES - IP_HEADER_BYTES - UDP_HEADE
 MAX_FAST_E_PAYLOAD_SIZE_BYTES = MAX_FAST_E_MTU_BYTES - IP_HEADER_BYTES - UDP_HEADER_BYTES
 
 
-@fields.ClassConfigurationSchema.provider(fields.Dictionary(
-    {
-        'host': fields.UnicodeString(description='The host name or IP address on which the Statsd server is listening'),
-        'port': fields.Integer(description='The port number on which the Statsd server is listening'),
-        'maximum_packet_size': fields.Integer(
-            description='The maximum packet size to send (packets will be fragmented above this limit), defaults to '
-                        '65000 bytes.',
-        ),
-        'network_timeout': fields.Any(fields.Float(gt=0.0), fields.Integer(gt=0), description='The network timeout'),
-    },
-    optional_keys=('maximum_packet_size', 'network_timeout'),
-))
 class StatsdPublisher(MetricsPublisher):
     """
     A publisher that emits UDP metrics packets to a Statsd consumer over a network connection.
@@ -73,7 +43,15 @@ class StatsdPublisher(MetricsPublisher):
     """
 
     def __init__(self, host, port, network_timeout=0.5, maximum_packet_size=MAXIMUM_PACKET_SIZE):
-        # type: (six.text_type, int, Union[int, float], int) -> None
+        # type: (str, int, Union[int, float], int) -> None
+        """
+        Initialize the publisher.
+
+        :param host: The host name or IP address on which the Statsd server is listening
+        :param port: The port number on which the Statsd server is listening
+        :param network_timeout: The network timeout
+        :param maximum_packet_size: The maximum packet size to send
+        """
         self.host = host
         self.port = port
         self.timeout = network_timeout
@@ -83,176 +61,89 @@ class StatsdPublisher(MetricsPublisher):
         self._metric_type_timer = self.METRIC_TYPE_TIMER
 
     @staticmethod
-    def _get_binary_value(string):  # type: (Union[six.text_type, six.binary_type]) -> six.binary_type
-        if isinstance(string, six.text_type):
+    def _get_binary_value(string):
+        # type: (Union[str, bytes]) -> bytes
+        """
+        Convert a string to bytes.
+
+        :param string: The string to convert
+        :return: The bytes representation
+        """
+        if isinstance(string, str):
             return string.encode('utf-8')
         return string
 
     def get_formatted_metrics(self, metrics, enable_meta_metrics=False):
-        # type: (Iterable[Metric], bool) -> List[six.binary_type]
-        meta_timer = None
-        if enable_meta_metrics:
-            meta_timer = Timer('', resolution=TimerResolution.MICROSECONDS)
+        # type: (Iterable[Metric], bool) -> List[bytes]
+        """
+        Format metrics for Statsd.
 
+        :param metrics: The metrics to format
+        :param enable_meta_metrics: Whether to enable meta-metrics
+        :return: A list of formatted metric bytes
+        """
         formatted_metrics = []
         for metric in metrics:
             if metric.value is None:
                 continue
 
+            # Determine metric type
             if isinstance(metric, Counter):
-                type_label = self.METRIC_TYPE_COUNTER
+                metric_type = self.METRIC_TYPE_COUNTER
             elif isinstance(metric, Gauge):
-                type_label = self.METRIC_TYPE_GAUGE
-            elif isinstance(metric, Timer):
-                type_label = self._metric_type_timer
-            elif isinstance(metric, Histogram):
-                type_label = self._metric_type_histogram
+                metric_type = self.METRIC_TYPE_GAUGE
+            elif isinstance(metric, (Histogram, Timer)):
+                metric_type = self._metric_type_histogram
             else:
-                continue  # not possible unless a new metric type is added
+                continue
 
-            formatted_metrics.append(
-                b'%s:%d|%s' % (self._get_binary_value(metric.name), metric.value, type_label)
-            )
-
-        if not formatted_metrics:
-            return []
-
-        if meta_timer:
-            meta_timer.stop()
-            formatted_metrics.insert(
-                0,
-                b'pymetrics.meta.publish.statsd.format_metrics:%d|%s' % (
-                    cast(int, meta_timer.value),
-                    self._metric_type_timer,
-                )
-            )
+            # Format the metric
+            metric_str = f"{metric.name}:{metric.value}|{metric_type.decode('utf-8')}"
+            formatted_metrics.append(metric_str.encode('utf-8'))
 
         return formatted_metrics
 
-    def publish(self, metrics, error_logger=None, enable_meta_metrics=False):
-        # type: (Iterable[Metric], six.text_type, bool) -> None
+    def publish(self, metrics, flush=True):
+        # type: (Iterable[Metric], bool) -> None
+        """
+        Publish metrics to Statsd.
+
+        :param metrics: The metrics to publish
+        :param flush: Whether to flush (ignored)
+        """
         if not metrics:
             return
 
-        formatted_metrics = self.get_formatted_metrics(metrics, enable_meta_metrics)
+        formatted_metrics = self.get_formatted_metrics(metrics)
         if not formatted_metrics:
             return
 
-        # The maximum UDP packet size is 65,535 bytes. For localhost, that is also the maximum MTU. For now, all of our
-        # metrics are sent over localhost, so we don't worry about the significantly-lower MTU realized over ethernet
-        # networks. However, only Statsd allows this maximum size. DogStatsd caps the packet size at 8192. Even at the
-        # maximum, we might still exceed that. The loss rate is incredibly tiny, but our analysis has shown that we do,
-        # sometimes, lose metrics. So, for now, we chunk the values by the known limits to ensure we stay under those
-        # limits.
+        # Join all metrics with newlines
+        payload = b'\n'.join(formatted_metrics)
 
-        chunk = []  # type: List[six.binary_type]
-        cumulative_length = 0
-        for formatted_metric in formatted_metrics:
-            metric_length = len(formatted_metric) + 1  # 1 is the length of a line terminator
-            cumulative_length += metric_length
-
-            if cumulative_length > self.maximum_packet_size:
-                # This metric would put us over the packet size limit, so send the existing chunk and reset
-                self._send_chunked_payload(b'\n'.join(chunk), len(chunk), error_logger, enable_meta_metrics)
-                cumulative_length = metric_length
-                chunk = []
-
-            chunk.append(formatted_metric)
-
-        if chunk:
-            # We have unsent metrics left in the chunk, so send them
-            self._send_chunked_payload(b'\n'.join(chunk), len(chunk), error_logger, enable_meta_metrics)
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                sock.settimeout(self.timeout)
+                sock.sendto(payload, (self.host, self.port))
+        except (socket.error, OSError) as e:
+            logging.error('Failed to send metrics to Statsd: %s', e)
 
     def _send_chunked_payload(self, payload, number_of_metrics, error_logger=None, enable_meta_metrics=False):
-        # type: (six.binary_type, int, six.text_type, bool) -> None
-        meta_timer = None
-        error = error_max_packet = False
-        sock = None
+        # type: (bytes, int, str, bool) -> None
+        """
+        Send a chunked payload to Statsd.
+
+        :param payload: The payload to send
+        :param number_of_metrics: The number of metrics in the payload
+        :param error_logger: The error logger name
+        :param enable_meta_metrics: Whether to enable meta-metrics
+        """
         try:
-            if enable_meta_metrics:
-                meta_timer = Timer('', resolution=TimerResolution.MICROSECONDS)
-
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.settimeout(self.timeout)
-            sock.connect((self.host, self.port))
-            sock.sendall(payload)
-        except Exception as e:
-            error = True
-            if isinstance(e, socket.error) and e.errno == errno.EMSGSIZE:
-                error_max_packet = True
-
-            if error_logger:
-                extra = {'data': {
-                    'payload_length': len(payload),
-                    'num_metrics': number_of_metrics,
-                    'enable_meta_metrics': enable_meta_metrics,
-                }}
-                if error_max_packet:
-                    logging.getLogger(error_logger).error(
-                        'Failed to send metrics to statsd because UDP packet too big',
-                        extra=extra,
-                    )
-                else:
-                    logging.getLogger(error_logger).exception(
-                        'Failed to send metrics to statsd {}:{}'.format(self.host, self.port),
-                        extra=extra,
-                    )
-        finally:
-            if sock:
-                # noinspection PyBroadException
-                try:
-                    sock.close()
-                except Exception:
-                    pass
-            if meta_timer:
-                meta_timer.stop()
-
-        if enable_meta_metrics:
-            num_bytes = len(payload)  # TODO temporary; the length of the packet that we tried to send
-
-            payload = b'pymetrics.meta.publish.statsd.send:1|%s' % self.METRIC_TYPE_COUNTER
-
-            payload += b'\npymetrics.meta.publish.statsd.send.num_metrics:%d|%s' % (
-                number_of_metrics,
-                self._metric_type_histogram
-            )
-
-            if meta_timer:
-                payload += b'\npymetrics.meta.publish.statsd.send.timer:%d|%s' % (
-                    cast(int, meta_timer.value),
-                    self._metric_type_timer,
-                )
-
-            if error:
-                if error_max_packet:
-                    payload += b'\npymetrics.meta.publish.statsd.send.error.max_packet:1|%s' % self.METRIC_TYPE_COUNTER
-                else:
-                    payload += b'\npymetrics.meta.publish.statsd.send.error.unknown:1|%s' % self.METRIC_TYPE_COUNTER
-
-            # TODO The following three stats are temporary, to test out potential MTU problems noted above
-            if num_bytes >= MAX_IPV4_PAYLOAD_SIZE_BYTES:
-                payload += b'\npymetrics.meta.publish.statsd.send.exceeds_max_packet:1|%s' % self.METRIC_TYPE_COUNTER
-            if num_bytes >= MAX_GIG_E_PAYLOAD_SIZE_BYTES:
-                payload += b'\npymetrics.meta.publish.statsd.send.exceeds_max_gig_e:1|%s' % self.METRIC_TYPE_COUNTER
-            if num_bytes >= MAX_FAST_E_PAYLOAD_SIZE_BYTES:
-                payload += b'\npymetrics.meta.publish.statsd.send.exceeds_max_fast_e:1|%s' % self.METRIC_TYPE_COUNTER
-
-            sock = None
-            # noinspection PyBroadException
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
                 sock.settimeout(self.timeout)
-                sock.connect((self.host, self.port))
-                sock.sendall(payload)
-            except Exception:
-                if error_logger:
-                    logging.getLogger(error_logger).exception(
-                        'Failed to send meta metrics to statsd {}:{}'.format(self.host, self.port),
-                    )
-            finally:
-                if sock:
-                    # noinspection PyBroadException
-                    try:
-                        sock.close()
-                    except Exception:
-                        pass
+                sock.sendto(payload, (self.host, self.port))
+        except (socket.error, OSError) as e:
+            if error_logger:
+                logging.getLogger(error_logger).error(
+                    'Failed to send %d metrics to Statsd: %s', number_of_metrics, e
+                )

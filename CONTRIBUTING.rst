@@ -1,133 +1,136 @@
-Contributing
-============
+Contributing to PyMetrics
+========================
 
-Contributions are welcome, and they are greatly appreciated! Every little bit helps, and credit will always be given.
+We love your input! We want to make contributing to PyMetrics as easy and transparent as possible, whether it's:
 
-You can contribute in many ways:
+* Reporting a bug
+* Discussing the current state of the code
+* Submitting a fix
+* Proposing new features
+* Becoming a maintainer
 
-Types of Contributions
-----------------------
+We Develop with Github
+---------------------
 
-Report Bugs
-~~~~~~~~~~~
+We use GitHub to host code, to track issues and feature requests, as well as accept pull requests.
 
-Report bugs at https://github.com/eventbrite/pymetrics/issues.
+We Use [Github Flow](https://guides.github.com/introduction/flow/index.html)
+-------------------------------------------------------------------------
 
-If you are reporting a bug, please include:
+Pull requests are the best way to propose changes to the codebase. We actively welcome your pull requests:
 
-* Your operating system name and version.
-* Your Python interpreter type and version.
-* Any details about your local setup that might be helpful in troubleshooting.
-* Detailed steps to reproduce the bug.
+1. Fork the repo and create your branch from `master`.
+2. If you've added code that should be tested, add tests.
+3. If you've changed APIs, update the documentation.
+4. Ensure the test suite passes.
+5. Make sure your code lints.
+6. Issue that pull request!
 
-Fix Bugs
-~~~~~~~~
+We Use Pull Requests
+-------------------
 
-Look through the GitHub issues for bugs. Anything tagged with "bug" is open to whoever wants to fix it.
+We use [Github pull requests](https://github.com/eventbrite/pymetrics/pulls) to accept changes.
 
-Implement Features
-~~~~~~~~~~~~~~~~~~
+Any contributions you make will be under the Apache Software License
+-----------------------------------------------------------------
 
-Look through the GitHub issues for features. Anything tagged with "feature" is open to whoever wants to implement it.
+In short, when you submit code changes, your submissions are understood to be under the same [Apache License](http://www.apache.org/licenses/LICENSE-2.0) that covers the project. Feel free to contact the maintainers if that's a concern.
 
-Write Documentation
-~~~~~~~~~~~~~~~~~~~
+Report bugs using Github's [issue tracker](https://github.com/eventbrite/pymetrics/issues)
+---------------------------------------------------------------------------------------
 
-PyMetrics could always use more documentation, whether as part of the official PyMetrics docs, in docstrings, or even
-on the web in blog posts, articles, and more.
+We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/eventbrite/pymetrics/issues/new); it's that easy!
 
-Submit Feedback
-~~~~~~~~~~~~~~~
+Write bug reports with detail, background, and sample code
+--------------------------------------------------------
 
-The best way to send feedback is to file an issue at https://github.com/eventbrite/pymetrics/issues.
+**Great Bug Reports** tend to have:
 
-If you are proposing a feature:
+* A quick summary and/or background
+* Steps to reproduce
+  * Be specific!
+  * Give sample code if you can.
+* What you expected would happen
+* What actually happens
+* Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
 
-* Explain in detail how it would work.
-* Keep the scope as narrow as possible, to make it easier to implement.
-* Remember that contributions are welcome. :)
+License
+-------
 
-Get Started
------------
+By contributing, you agree that your contributions will be licensed under its Apache License.
 
-Ready to contribute? Here's how to set up PyMetrics for local development.
+References
+----------
 
-1. Fork the ``pymetrics`` repository on GitHub.
-2. Clone your fork locally::
+This document was adapted from the open-source contribution guidelines for [Facebook's Draft](https://github.com/facebook/draft-js/blob/a9316a723f9e918afde44dea68b5f9f39b7d9b00/CONTRIBUTING.md).
 
-       $ git clone git@github.com:your_name_here/pymetrics.git
+Development Setup
+================
 
-3. Create Python 2.7 and 3.7 virtualenvs (you should ``pip install virtualenvwrapper`` on your system if you have not
-   already) for installing PyMetrics dependencies::
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/eventbrite/pymetrics.git
+   cd pymetrics
+   ```
 
-       $ mkvirtualenv2 pymetrics2
-       (pymetrics2) $ pip install -e .[testing]
-       (pymetrics2) $ deactivate
-       $ mkvirtualenv3 pymetrics3
-       (pymetrics3) $ pip install -e .[testing]
-       (pymetrics3) $ deactivate
+2. Create Python 3.12 virtual environment (you should ``pip install virtualenvwrapper`` on your system if you have not
+   already):
+   ```bash
+   mkvirtualenv pymetrics
+   ```
 
-4. Make sure the tests pass on master before making any changes; otherwise, you might have an environment issue::
+3. Install the package in development mode:
+   ```bash
+   pip install -e .[testing]
+   ```
 
-       (pymetrics2) $ pytest
-       (pymetrics3) $ pytest
+4. Run the tests to make sure everything is working:
+   ```bash
+   pytest
+   ```
 
-5. Create a branch for local development::
+5. Run linting:
+   ```bash
+   flake8 pymetrics/ tests/
+   mypy pymetrics/
+   ```
 
-       $ git checkout -b name-of-your-bugfix-or-feature
+Code Style
+==========
 
-   Now you can make your changes locally.
+* We use `flake8` for linting
+* We use `mypy` for type checking
+* We use `black` for code formatting
+* We use `isort` for import sorting
 
-5. As you make changes, and when you are done making changes, regularly check that Flake8 and MyPy analysis and all of
-   the tests pass. You should also include new tests or assertions to validate your new or changed code::
+You can run all style checks with:
+```bash
+flake8 pymetrics/ tests/
+mypy pymetrics/
+black --check pymetrics/ tests/
+isort --check-only pymetrics/ tests/
+```
 
-       # flake8 may need to be run within a virtualenv, depending on your setup, but is shown here without
-       $ flake8-python2
-       $ flake8-python3
-       (pymetrics2) $ pytest
-       (pymetrics3) $ pytest
-       (pymetrics3) $ mypy .
+Testing
+=======
 
-       # to run a subset of tests
-       (pymetrics3) $ pytest path/to/test/folder
-       (pymetrics3) $ pytest path/to/test/module.py
-       (pymetrics3) $ pytest -k name_of_module.py
-       (pymetrics3) $ pytest -k NameOfTestClass
-       (pymetrics3) $ pytest -k name_of_test_function_or_method
+We use `pytest` for testing. To run the tests:
 
-   You can also take advantage of the Tox setup to run all of the tests locally in multiple environments using Docker::
+```bash
+pytest
+```
 
-       $ ./tox.sh
-
-6. When you think you're ready to commit, run ``isort`` to organize your imports:
-
-       $ isort
-
-7. Commit your changes and push your branch to GitHub::
-
-       $ git add -A
-       $ git commit -m "[PATCH] Your detailed description of your changes"
-       $ git push origin name-of-your-bugfix-or-feature
-
-   Commit messages should start with ``[PATCH]`` for bug fixes that don't impact the *public* interface of the library,
-   ``[MINOR]`` for changes that add new feature or alter the *public* interface of the library in non-breaking ways,
-   or ``[MAJOR]`` for any changes that break backwards compatibility. This project strictly adheres to SemVer, so these
-   commit prefixes help guide whether a patch, minor, or major release will be tagged. You should strive to avoid
-   ``[MAJOR]`` changes, as they will not be released until the next major milestone, which could be as much as a year
-   away.
-
-8. Submit a pull request through the GitHub website.
+To run tests with coverage:
+```bash
+pytest --cov=pymetrics --cov-report=html
+```
 
 Pull Request Guidelines
------------------------
+======================
 
-Before you submit a pull request, check that it meets these guidelines:
-
-1. The pull request should include tests.
-2. If the pull request adds functionality, the documentation should be updated. Put your new functionality into a
-   class or function with a docstring, and add the feature to the appropriate location in ``docs/``. If you created a
-   new module and it contains classes that should be publicly documented, add an autodoc config for that module to
-   ``docs/reference.rst``.
-3. The pull request should work for Python 2.7, 3.5, 3.6, and 3.7. Check
-   https://travis-ci.org/eventbrite/pymetrics/pull_requests and make sure that the tests pass for all supported Python
-   versions.
+1. Update the documentation if needed
+2. Add tests for any new functionality
+3. The pull request should work for Python 3.7, 3.8, 3.9, 3.10, 3.11, and 3.12. Check
+   that the tests pass for all supported Python versions.
+4. Make sure your code follows the style guidelines
+5. Update the changelog if needed

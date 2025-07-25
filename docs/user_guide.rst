@@ -208,7 +208,7 @@ PyMetrics comes with several publishers, and the best way to learn about each is
 
 
 Configuration
--------------
+------------
 
 PyMetrics has a standard configuration schema that uses `Conformity <https://github.com/eventbrite/conformity>`_ for
 validation. When you configure PyMetrics, you pass a configuration dictionary matching this schema into the metrics

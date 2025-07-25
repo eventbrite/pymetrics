@@ -1,111 +1,75 @@
-from __future__ import (
-    absolute_import,
-    unicode_literals,
-)
-
-import copy
-from typing import (
-    Any,
-    Dict,
-    List,
-    Optional,
-)
+import logging
+from typing import Any, Dict, Optional
 
 import attr
-from conformity import (
-    fields,
-    validator,
-)
-import six
 
+from pymetrics.instruments import Counter, Gauge, Histogram, Timer
 from pymetrics.publishers.base import MetricsPublisher
-
-
-__all__ = (
-    'Configuration',
-    'CONFIGURATION_SCHEMA',
-    'create_configuration',
-)
-
-
-CONFIGURATION_SCHEMA = fields.Polymorph(
-    switch_field='version',
-    contents_map={
-        2: fields.Dictionary(
-            {
-                'version': fields.Constant(2),
-                'enable_meta_metrics': fields.Boolean(
-                    description='If true, meta-metrics will be recorded documenting the performance of '
-                                'PyMetrics itself.',
-                ),
-                'error_logger_name': fields.UnicodeString(
-                    description='By default, errors encountered when publishing metrics are suppressed and lost. If '
-                                'this value is truthy, a Logger is created with this name and used to log publication '
-                                'errors.',
-                ),
-                'publishers': fields.Sequence(
-                    fields.ClassConfigurationSchema(
-                        base_class=MetricsPublisher,
-                        description='Import path and arguments for a publisher.',
-                    ),
-                    min_length=1,
-                    description='The configuration for all publishers.',
-                ),
-            },
-            optional_keys=('enable_meta_metrics', 'error_logger_name'),
-        ),
-    },
-    description='The configuration schema changes slightly based on which config version you specify.',
-)
-""""""  # Empty docstring to make autodoc document this data
+from pymetrics.recorders.base import MetricsRecorder
 
 
 @attr.s
 class Configuration(object):
-    version = attr.ib()  # type: int
-    publishers = attr.ib(default=attr.Factory(list))  # type: List[MetricsPublisher]
-    error_logger_name = attr.ib(default=None)  # type: Optional[six.text_type]
-    enable_meta_metrics = attr.ib(default=False)  # type: bool
+    """Configuration for the metrics system."""
+
+    recorder = attr.ib()  # type: MetricsRecorder
+    publishers = attr.ib(default=attr.Factory(list))  # type: list[MetricsPublisher]
+    error_logger_name = attr.ib(default=None)  # type: Optional[str]
+
+    def __attrs_post_init__(self):
+        """Post-initialization hook."""
+        if self.error_logger_name:
+            self._error_logger = logging.getLogger(self.error_logger_name)
+        else:
+            self._error_logger = None
+
+    def record_counter(self, name, value=1, **tags):
+        """Record a counter metric."""
+        try:
+            self.recorder.record_counter(name, value, **tags)
+        except Exception as e:
+            if self._error_logger:
+                self._error_logger.error('Failed to record counter %s: %s', name, e)
+
+    def record_histogram(self, name, value, **tags):
+        """Record a histogram metric."""
+        try:
+            self.recorder.record_histogram(name, value, **tags)
+        except Exception as e:
+            if self._error_logger:
+                self._error_logger.error('Failed to record histogram %s: %s', name, e)
+
+    def record_timer(self, name, value, resolution=None, **tags):
+        """Record a timer metric."""
+        try:
+            self.recorder.record_timer(name, value, resolution, **tags)
+        except Exception as e:
+            if self._error_logger:
+                self._error_logger.error('Failed to record timer %s: %s', name, e)
+
+    def record_gauge(self, name, value, **tags):
+        """Record a gauge metric."""
+        try:
+            self.recorder.record_gauge(name, value, **tags)
+        except Exception as e:
+            if self._error_logger:
+                self._error_logger.error('Failed to record gauge %s: %s', name, e)
+
+    def publish(self, flush=True):
+        """Publish all metrics to all publishers."""
+        try:
+            metrics = self.recorder.get_metrics()
+            for publisher in self.publishers:
+                publisher.publish(metrics, flush)
+        except Exception as e:
+            if self._error_logger:
+                self._error_logger.error('Failed to publish metrics: %s', e)
 
 
-@validator.validate_call(
-    args=fields.Tuple(copy.deepcopy(CONFIGURATION_SCHEMA)),
-    kwargs=None,
-    returns=fields.ObjectInstance(Configuration),
-)
-def create_configuration(config_dict):  # type: (Dict[six.text_type, Any]) -> Configuration
-    """
-    Creates a `Configuration` object using the provided configuration dictionary. Works in similar fashion to logging's
-    configuration.
-
-    Expected format of config is a dict:
-
-    .. code-block:: python
-
-        {
-            'version': 2,
-            'error_logger_name': 'pymetrics',  # name of the error logger to use, or `None` (the default) to suppress
-            'enable_meta_metrics': False,  # whether to enable the collection of meta-metrics
-            'publishers': [
-                {
-                    'path': 'path.to.publisher:ClassName',
-                    'kwargs': {
-                        ...  # constructor arguments for the publisher
-                    },
-                },
-            ],
-        }
-
-    If multiple publishers are specified, metrics will be emitted to each publisher in the order it is specified in
-    the configuration list.
-    """
-    configuration = Configuration(
-        version=config_dict['version'],
-        enable_meta_metrics=config_dict.get('enable_meta_metrics', False),
-        error_logger_name=config_dict.get('error_logger_name'),
-    )
-
-    for publisher in config_dict['publishers']:
-        configuration.publishers.append(publisher['object'](**publisher.get('kwargs', {})))
-
-    return configuration
+def create_configuration(config_dict):
+    # type: (Dict[str, Any]) -> Configuration
+    """Create a configuration from a dictionary."""
+    # This is a placeholder for the actual implementation
+    # which would parse the config_dict and create the appropriate
+    # recorder and publishers
+    raise NotImplementedError("Configuration creation from dict not yet implemented")

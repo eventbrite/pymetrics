@@ -1,95 +1,51 @@
-from __future__ import (
-    absolute_import,
-    unicode_literals,
-)
-
 import logging
-from typing import (
-    Any,
-    Iterable,
-    Union,
-    cast,
-)
+from typing import Iterable, Union, Any
 
-from conformity import fields
-from conformity.fields.logging import PythonLogLevel
-import six
-
-from pymetrics.instruments import (
-    Counter,
-    Gauge,
-    Histogram,
-    Metric,
-    Timer,
-)
+from pymetrics.instruments import Metric
 from pymetrics.publishers.base import MetricsPublisher
 
 
-__all__ = (
-    'LogPublisher',
-)
+class LoggingMetricsPublisher(MetricsPublisher):
+    """
+    A metrics publisher that logs metrics to a logger.
+    """
 
+    def __init__(self, log_name, log_level=logging.INFO):
+        # type: (str, Union[int, str]) -> None
+        """
+        Initialize the publisher.
 
-@fields.ClassConfigurationSchema.provider(fields.Dictionary(
-    {
-        'log_name': fields.UnicodeString(description='The name of the logger to which to publish metrics'),
-        'log_level': fields.Any(
-            fields.Constant(10, 20, 30, 40, 50),
-            PythonLogLevel(),
-            description='The log level (name or int) for publishing metrics, defaults to logging.INFO',
-        ),
-    },
-    optional_keys=('log_level', ),
-))
-class LogPublisher(MetricsPublisher):
-    def __init__(self, log_name, log_level=logging.INFO):  # type: (six.text_type, Union[int, six.text_type]) -> None
-        self.log_name = log_name
-        self.logger = logging.getLogger(self.log_name)
+        :param log_name: The name of the logger to use
+        :param log_level: The log level to use
+        """
+        self.logger = logging.getLogger(log_name)
+        self.log_level = log_level
 
-        if isinstance(log_level, int):
-            self.log_level = log_level
-        else:
-            # getLevelName is a misnomer. It returns the name if you pass an int and the int if you pass a name.
-            self.log_level = cast(int, logging.getLevelName(log_level))
+    def _get_str_value(self, value):
+        # type: (Any) -> str
+        """
+        Convert a value to a string.
 
-    @staticmethod
-    def _get_str_value(value):  # type: (Any) -> six.text_type
-        if isinstance(value, six.binary_type):
+        :param value: The value to convert
+        :return: The string representation
+        """
+        if isinstance(value, bytes):
             return value.decode('utf-8')
-        return six.text_type(value)
+        return str(value)
 
-    def publish(self, metrics, error_logger=None, enable_meta_metrics=False):
-        # type: (Iterable[Metric], six.text_type, bool) -> None
+    def publish(self, metrics, flush=True):
+        # type: (Iterable[Metric], bool) -> None
+        """
+        Log the metrics.
+
+        :param metrics: The metrics to publish
+        :param flush: Whether to flush (ignored)
+        """
         if not metrics:
             return
 
         formatted_metrics = []
+        for metric in metrics:
+            formatted_metrics.append(' '.join((metric.name, self._get_str_value(metric.value))))
 
-        for metric in sorted(metrics, key=lambda x: '.'.join((str(type(x)), x.name))):
-            if metric.value is None:
-                continue
-
-            name = metric.name
-            if isinstance(metric, Counter):
-                name = '.'.join(('counters', name))
-            elif isinstance(metric, Gauge):
-                name = '.'.join(('gauges', name))
-            elif isinstance(metric, Timer):
-                name = '.'.join(('timers', name))
-            elif isinstance(metric, Histogram):
-                name = '.'.join(('histograms', name))
-
-            if getattr(metric, 'tags', None):
-                name += '{{{}}}'.format(
-                    ','.join(
-                        '{}:{}'.format(k, self._get_str_value(v) if v is not None else '[no value]')
-                        for k, v in sorted(metric.tags.items(), key=lambda x: x[0])
-                    ),
-                )
-
-            formatted_metrics.append(' '.join((name, six.text_type(metric.value))))
-
-        if not formatted_metrics:
-            return
-
-        self.logger.log(self.log_level, '; '.join(formatted_metrics))
+        self.logger.log(self.log_level, 'Metrics: %s', '; '.join(formatted_metrics))

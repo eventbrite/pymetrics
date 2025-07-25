@@ -2,6 +2,10 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 import datetime
 import sys
+import os
+
+# Add the project root to the Python path
+sys.path.insert(0, os.path.abspath('..'))
 
 from conformity.sphinx_ext.linkcode import create_linkcode_resolve
 
@@ -10,16 +14,21 @@ from pymetrics import __version__
 
 print(sys.path)
 
-_year = datetime.date.today().year
+_year = datetime.datetime.utcnow().year
 _date = datetime.datetime.utcnow().strftime('%Y %B %d %H:%M UTC')
 
+# Project information
 project = 'PyMetrics'
 # noinspection PyCompatibility
 copyright = f'{_year}, Eventbrite'
 author = 'Eventbrite'
+
+# The short X.Y version
 version = __version__
+# The full version, including alpha/beta/rc tags
 release = __version__
 
+# Add any Sphinx extension module names here, as strings
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.linkcode',

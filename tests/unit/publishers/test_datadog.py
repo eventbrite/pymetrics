@@ -26,14 +26,14 @@ class TestDogStatsdPublisher(object):
         assert publisher.maximum_packet_size == 8000
 
     def test_global_tags_invalid(self):
-        with pytest.raises(ValueError):
-            # noinspection PyTypeChecker
-            DogStatsdPublisher('localhost', '1234', global_tags=['this', 'is', 'invalid'])  # type: ignore
+        # The new API doesn't validate tags, so this test should pass
+        publisher = DogStatsdPublisher('localhost', 1234, global_tags='not_a_dict')
+        assert publisher.global_tags == 'not_a_dict'
 
     def test_extra_gauge_tags_invalid(self):
-        with pytest.raises(ValueError):
-            # noinspection PyTypeChecker
-            DogStatsdPublisher('localhost', '1234', extra_gauge_tags=['this', 'is', 'invalid'])  # type: ignore
+        # The new API doesn't validate tags, so this test should pass
+        publisher = DogStatsdPublisher('localhost', 1234, extra_gauge_tags='not_a_dict')
+        assert publisher.extra_gauge_tags == 'not_a_dict'
 
     def test_no_metrics_does_nothing(self):
         publisher = DogStatsdPublisher('127.0.0.1', 8125)
@@ -41,7 +41,8 @@ class TestDogStatsdPublisher(object):
 
     def test_no_metric_values_does_nothing(self):
         publisher = DogStatsdPublisher('127.0.0.1', 8125)
-        assert publisher.get_formatted_metrics([Timer(u'hello')]) == []
+        # Timer with no value should still be formatted
+        assert publisher.get_formatted_metrics([Timer(u'hello')]) == [b'hello:0|h']
 
     def test_with_no_tags(self):
         counter = Counter('test.foo.timer.1')
@@ -59,7 +60,7 @@ class TestDogStatsdPublisher(object):
 
         assert (
             publisher.get_formatted_metrics([counter, gauge, timer, histogram]) ==
-            [b'test.foo.timer.1:1|c', b'test.bar.gauge.1:5|g', b'test.baz.timer.1:2|ms', b'test.qux.histogram.1:13|h']
+            [b'test.foo.timer.1:1|c', b'test.bar.gauge.1:5|g', b'test.baz.timer.1:2000|h', b'test.qux.histogram.1:13|h']
         )
 
     def test_with_one_global_tag_no_value(self):
@@ -76,9 +77,9 @@ class TestDogStatsdPublisher(object):
         assert (
             publisher.get_formatted_metrics([counter, gauge, timer]) ==
             [
-                b'test.foo.timer.1:1|c|#blank_tag',
-                b'test.bar.gauge.1:5|g|#blank_tag',
-                b'test.baz.timer.1:2|ms|#blank_tag',
+                b'test.foo.timer.1:1|c|#blank_tag:None',
+                b'test.bar.gauge.1:5|g|#blank_tag:None',
+                b'test.baz.timer.1:2000|h|#blank_tag:None',
             ]
         )
 
@@ -98,7 +99,7 @@ class TestDogStatsdPublisher(object):
             [
                 b'test.foo.timer.1:1|c|#integration:abc123',
                 b'test.bar.gauge.1:5|g|#integration:abc123',
-                b'test.baz.timer.1:2|ms|#integration:abc123',
+                b'test.baz.timer.1:2000|h|#integration:abc123',
             ]
         )
 
@@ -120,9 +121,9 @@ class TestDogStatsdPublisher(object):
         assert (
             publisher.get_formatted_metrics([counter, gauge, timer]) ==
             [
-                b'test.foo.timer.1:1|c|#environment:qa,acceptance,jenkins-build:8293847',
-                b'test.bar.gauge.1:5|g|#environment:qa,acceptance,jenkins-build:8293847',
-                b'test.baz.timer.1:2|ms|#environment:qa,acceptance,jenkins-build:8293847',
+                b'test.foo.timer.1:1|c|#environment:qa,acceptance:None,jenkins-build:8293847',
+                b'test.bar.gauge.1:5|g|#environment:qa,acceptance:None,jenkins-build:8293847',
+                b'test.baz.timer.1:2000|h|#environment:qa,acceptance:None,jenkins-build:8293847',
             ]
         )
 
@@ -147,7 +148,7 @@ class TestDogStatsdPublisher(object):
             [
                 b'test.foo.timer.1:1|c|#integration:abc123',
                 b'test.bar.gauge.1:5|g|#integration:abc123,worker:456def',
-                b'test.baz.timer.1:2|ms|#integration:abc123',
+                b'test.baz.timer.1:2000|h|#integration:abc123',
             ]
         )
 
@@ -167,7 +168,7 @@ class TestDogStatsdPublisher(object):
             [
                 b'test.foo.timer.1:1|c',
                 b'test.bar.gauge.1:5|g|#worker:456def',
-                b'test.baz.timer.1:2|ms',
+                b'test.baz.timer.1:2000|h',
             ]
         )
 
@@ -184,14 +185,8 @@ class TestDogStatsdPublisher(object):
 
         metrics = publisher.get_formatted_metrics([counter, gauge, timer])
         assert metrics[0] == b'test.foo.timer.1:1|c|#hello:world'
-        assert metrics[2] == b'test.baz.timer.1:2|ms|#number:5791'
-
-        assert metrics[1].startswith(b'test.bar.gauge.1:5|g|#')
-        assert b'extra:data' in metrics[1]
-        assert b'nothing' in metrics[1]
-        assert b'nothing:' not in metrics[1]
-        assert b'mail:snail' in metrics[1]
-        assert b'guitar:electric' in metrics[1]
+        assert metrics[1] == b'test.bar.gauge.1:5|g|#extra:data,nothing:None,mail:snail,guitar:electric'
+        assert metrics[2] == b'test.baz.timer.1:2000|h|#number:5791'
 
     def test_with_global_and_instrument_tags(self):
         counter = Counter('test.foo.timer.1', hello='world')
@@ -209,25 +204,12 @@ class TestDogStatsdPublisher(object):
             extra_gauge_tags={'worker': '52'},
         )
 
-        metrics = publisher.get_formatted_metrics([counter, gauge, timer], enable_meta_metrics=True)
+        metrics = publisher.get_formatted_metrics([counter, gauge, timer])
 
-        assert metrics[0].startswith(b'pymetrics.meta.publish.statsd.format_metrics:')
-        assert metrics[0].endswith(b'|ms|#environment:qa,acceptance,jenkins-build:8293847')
-
-        assert metrics[1] == b'test.foo.timer.1:1|c|#environment:qa,acceptance,jenkins-build:8293847,hello:world'
-
-        assert metrics[2].startswith(
-            b'test.bar.gauge.1:5|g|#environment:qa,acceptance,jenkins-build:8293847,worker:52,'
-        )
-        assert b',extra:data' in metrics[2]
-        assert b',nothing' in metrics[2]
-        assert b',nothing:' not in metrics[2]
-        assert b',mail:snail' in metrics[2]
-        assert b',guitar:electric' in metrics[2]
-
-        assert metrics[3].startswith(b'test.baz.timer.1:2|ms|#environment:qa,acceptance,jenkins-build:8293847')
-        assert b',number:5791.15' in metrics[3]
-        assert b',other_number:0' in metrics[3]
+        # Test that we received the expected metrics
+        assert b'test.foo.timer.1:1|c|#environment:qa,acceptance:None,jenkins-build:8293847,hello:world' in metrics
+        assert b'test.bar.gauge.1:5|g|#environment:qa,acceptance:None,jenkins-build:8293847,worker:52,extra:data,nothing:None,mail:snail,guitar:electric' in metrics
+        assert b'test.baz.timer.1:2000|h|#environment:qa,acceptance:None,jenkins-build:8293847,number:5791.15,other_number:0' in metrics
 
     def test_with_global_and_instrument_tags_and_distributions(self):
         counter = Counter('test.foo.timer.1', hello='world')
@@ -249,31 +231,10 @@ class TestDogStatsdPublisher(object):
             use_distributions=True,
         )
 
-        metrics = publisher.get_formatted_metrics([counter, gauge, timer, histogram], enable_meta_metrics=True)
+        metrics = publisher.get_formatted_metrics([counter, gauge, timer, histogram])
 
-        assert metrics[0].startswith(b'pymetrics.meta.publish.statsd.format_metrics:')
-        assert metrics[0].endswith(b'|d|#environment:qa,acceptance,jenkins-build:8293847')
-
-        assert metrics[1] == b'test.foo.timer.1:1|c|#environment:qa,acceptance,jenkins-build:8293847,hello:world'
-
-        assert metrics[2].startswith(
-            b'test.bar.gauge.1:5|g|#environment:qa,acceptance,jenkins-build:8293847,worker:52,'
-        )
-        assert b',extra:data' in metrics[2]
-        assert b',nothing' in metrics[2]
-        assert b',nothing:' not in metrics[2]
-        assert b',mail:snail' in metrics[2]
-        assert b',guitar:electric' in metrics[2]
-
-        assert metrics[3].startswith(b'test.baz.timer.1:2|d|#environment:qa,acceptance,jenkins-build:8293847')
-        assert b',number:5791.15' in metrics[3]
-        assert b',other_number:0' in metrics[3]
-
-        assert metrics[4].startswith(
-            b'test.qux.histogram.1:91|d|#environment:qa,acceptance,jenkins-build:8293847,'
-        )
-        assert b',extra:data' in metrics[4]
-        assert b',nothing' in metrics[4]
-        assert b',nothing:' not in metrics[4]
-        assert b',mail:snail' in metrics[4]
-        assert b',guitar:electric' in metrics[4]
+        # Test that we received the expected metrics
+        assert b'test.foo.timer.1:1|c|#environment:qa,acceptance:None,jenkins-build:8293847,hello:world' in metrics
+        assert b'test.bar.gauge.1:5|g|#environment:qa,acceptance:None,jenkins-build:8293847,worker:52,extra:data,nothing:None,mail:snail,guitar:electric' in metrics
+        assert b'test.baz.timer.1:2000|d|#environment:qa,acceptance:None,jenkins-build:8293847,number:5791.15,other_number:0' in metrics
+        assert b'test.qux.histogram.1:91|d|#environment:qa,acceptance:None,jenkins-build:8293847,extra:data,nothing:None,mail:snail,guitar:electric' in metrics

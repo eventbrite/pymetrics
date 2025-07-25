@@ -1,8 +1,3 @@
-from __future__ import (
-    absolute_import,
-    unicode_literals,
-)
-
 import abc
 import copy
 import functools
@@ -10,9 +5,12 @@ from typing import (
     Any,
     Callable,
     TypeVar,
+    Dict,
+    List,
+    Optional,
+    Type,
+    Union,
 )
-
-import six
 
 from pymetrics.instruments import (
     Counter,
@@ -35,115 +33,95 @@ M = TypeVar('M', bound=Metric)
 R = TypeVar('R')
 
 
-@six.add_metaclass(abc.ABCMeta)
-class MetricsRecorder(object):
-    @abc.abstractmethod
-    def counter(self, name, initial_value=0, **tags):
-        # type: (six.text_type, int, **Tag) -> Counter
-        """
-        Creates a new counter and prepares it for publishing. The initial value is 0 if not specified. Increment the
-        counter after it is returned if you do not specify an initial value.
-
-        :param name: The name of the metric
-        :param initial_value: The initial value, which defaults to 0
-        :param tags: An additional tags you want associated with this metric
-        :return: the created counter.
-        """
+class MetricsRecorder(abc.ABC):
+    """
+    Abstract base class for all metrics recorders.
+    """
 
     @abc.abstractmethod
-    def histogram(self, name, force_new=False, initial_value=0, **tags):
-        # type: (six.text_type, bool, int, **Tag) -> Histogram
+    def record_counter(self, name, value=1, **tags):
+        # type: (str, int, **Tag) -> Counter
         """
-        Creates a new histogram for recording arbitrary numbers that can be averaged and summed. The initial value is
-        0 if not specified. Set the value after it is returned if you do not specify an initial value.
+        Record a counter metric.
 
-        :param name: The name of the metric
-        :param force_new: Whether to force the creation of a new histogram if there is already an unpublished
-                          histogram with the same name and tags.
-        :param initial_value: The initial value, which defaults to 0
-        :param tags: An additional tags you want associated with this metric
-        :return: the created histogram.
-        """
+        :param name: The name of the counter
+        :param value: The value to increment by
+        :param tags: Additional tags for the counter
 
-    @abc.abstractmethod
-    def timer(self, name, force_new=False, resolution=TimerResolution.MILLISECONDS, initial_value=0, **tags):
-        # type: (six.text_type, bool, TimerResolution, int, **Tag) -> Timer
+        :return: The counter instance
         """
-        Creates and starts new timer, a special type of histogram that is recorded around the passage of time. The
-        initial value is 0 if not specified, and in most cases you should not specify an initial value. The default
-        resolution is milliseconds, which is suitable for most use cases. The returned timer will need to be stopped
-        before it can be published (or it will be ignored on publication). However, the returned timer is also a
-        context manager, so it will stop itself if you surround the code you wish to measure with `with timer(...)`.
-
-        :param name: The name of the metric
-        :param force_new: Whether to force the creation of a new timer if there is already an unpublished timer with
-                          the same name and tags.
-        :param resolution: The resolution at which the timer should record, which defaults to milliseconds
-        :param initial_value: The initial value, which defaults to 0
-        :param tags: An additional tags you want associated with this metric
-        :return: the created and started timer.
-        """
+        raise NotImplementedError()
 
     @abc.abstractmethod
-    def gauge(self, name, force_new=False, initial_value=0, **tags):
-        # type: (six.text_type, bool, int, **Tag) -> Gauge
+    def record_histogram(self, name, value, **tags):
+        # type: (str, bool, int, **Tag) -> Histogram
         """
-        Creates a new gauge and prepares it for publishing. The initial value is 0 if not specified. Set the value
-        after it is returned if you do not specify an initial value.
+        Record a histogram metric.
 
-        :param name: The name of the metric
-        :param force_new: Whether to force the creation of a new gauge if there is already an unpublished gauge with
-                          the same name and tags.
-        :param initial_value: The initial value, which defaults to 0
-        :param tags: An additional tags you want associated with this metric
-        :return: the created gauge.
-        """
+        :param name: The name of the histogram
+        :param value: The value to record
+        :param tags: Additional tags for the histogram
 
-    @abc.abstractmethod
-    def publish_all(self):
-        # type: () -> None
+        :return: The histogram instance
         """
-        Publishes all metrics that have been recorded since the last publish.
-        """
+        raise NotImplementedError()
 
     @abc.abstractmethod
-    def publish_if_full_or_old(self, max_metrics=18, max_age=10):
-        # type: (int, int) -> None
+    def record_timer(self, name, value, resolution=None, **tags):
+        # type: (str, bool, TimerResolution, int, **Tag) -> Timer
         """
-        Publishes all metrics if at least this many metrics have been recorded *or* at least this much time has elapsed
-        from the previous publish.
+        Record a timer metric.
 
-        :param max_metrics: If the recorder is holding at least this many metrics, publish now (defaults to 18, which
-                            is a likely-safe amount assuming an MTU of 1500, which is the MTU for Docker containers)
-        :param max_age: If the recorder last published at least this many seconds ago, publish now, even if the
-                        recorder isn't "full" (isn't holding on to at least `max_metrics`).
-        """
+        :param name: The name of the timer
+        :param value: The value to record
+        :param resolution: The resolution to use
+        :param tags: Additional tags for the timer
 
-    @abc.abstractmethod
-    def throttled_publish_all(self, delay=10):
-        # type: (int) -> None
+        :return: The timer instance
         """
-        Publishes all metrics that have been recorded since the last publish unless it has been lest than `delay`
-        seconds since the last publish.
-
-        :param delay: The minimum number of seconds between publishes
-        """
+        raise NotImplementedError()
 
     @abc.abstractmethod
-    def clear(self, only_published=False):
-        # type: (bool) -> None
+    def record_gauge(self, name, value, **tags):
+        # type: (str, bool, int, **Tag) -> Gauge
         """
-        Clear all metrics that have been recorded. However, if `only_published` is `True`, histograms (and timers)
-        that have not been published will not be cleared.
+        Record a gauge metric.
 
-        :param only_published: Whether to leave unpublished histograms
+        :param name: The name of the gauge
+        :param value: The value to set
+        :param tags: Additional tags for the gauge
+
+        :return: The gauge instance
         """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_metrics(self):
+        # type: () -> List[Metric]
+        """
+        Get all recorded metrics.
+
+        :return: A list of all metrics
+        """
+        raise NotImplementedError()
+
+    def configure(self, config=None):
+        # type: (Optional[Dict[str, Any]]) -> None
+        """
+        Configure this recorder.
+
+        :param config: The configuration dictionary
+        """
+        pass
+
+
+Tag = Union[str, bytes, int, float, bool, None]
 
 
 def metric_decorator(
     recorder_fetcher,  # type: Callable[[], MetricsRecorder]
-    metric_type,  # type: six.text_type
-    metric_name,  # type: six.text_type
+    metric_type,  # type: str
+    metric_name,  # type: str
     *metric_args,  # type: Any
     **metric_kwargs  # type: Any
 ):
@@ -199,7 +177,9 @@ def metric_decorator(
             m_kwargs = copy.deepcopy(metric_kwargs)
             include_metric = m_kwargs.pop(str('include_metric'), False)
 
-            metric = getattr(recorder_fetcher(), metric_type)(metric_name, *copy.deepcopy(metric_args), **m_kwargs)
+            recorder = recorder_fetcher()
+            method = getattr(recorder, metric_type)
+            metric = method(metric_name, *copy.deepcopy(metric_args), **m_kwargs)
 
             if include_metric:
                 kwargs[str('metric')] = metric

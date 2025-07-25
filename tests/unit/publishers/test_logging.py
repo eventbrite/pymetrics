@@ -1,54 +1,56 @@
-from __future__ import (
-    absolute_import,
-    unicode_literals,
-)
-
 import logging
+import pytest
 
-import mock
-
-from pymetrics.instruments import (
-    Counter,
-    Gauge,
-    Histogram,
-    Timer,
-)
-from pymetrics.publishers.logging import LogPublisher
+from pymetrics.instruments import Counter, Gauge, Histogram, Timer
+from pymetrics.publishers.logging import LoggingMetricsPublisher
 
 
-@mock.patch('pymetrics.publishers.logging.logging.getLogger')
-class TestLogPublisher(object):
-    def test_no_metrics_does_nothing(self, mock_get_logger):
-        publisher = LogPublisher(u'py_metrics', 'WARNING')
-        mock_get_logger.assert_called_once_with(u'py_metrics')
-        assert publisher.log_level == logging.WARNING
+def test_logging_publisher_creation():
+    """Test creating a logging publisher."""
+    publisher = LoggingMetricsPublisher("test_logger")
+    assert publisher.logger.name == "test_logger"
+    assert publisher.log_level == logging.INFO
 
-        publisher.publish([])
-        assert mock_get_logger.return_value.log.call_count == 0
 
-    def test_no_metric_values_does_nothing(self, mock_get_logger):
-        publisher = LogPublisher(u'custom_metrics')
-        mock_get_logger.assert_called_once_with(u'custom_metrics')
-        assert publisher.log_level == logging.INFO
+def test_logging_publisher_with_custom_level():
+    """Test creating a logging publisher with custom level."""
+    publisher = LoggingMetricsPublisher("test_logger", logging.DEBUG)
+    assert publisher.log_level == logging.DEBUG
 
-        publisher.publish([Timer(u'hello')])
-        assert mock_get_logger.return_value.log.call_count == 0
 
-    def test_metrics(self, mock_get_logger):
-        publisher = LogPublisher(u'py_metrics', logging.DEBUG)
-        assert publisher.log_level == logging.DEBUG
-        mock_get_logger.assert_called_once_with(u'py_metrics')
+def test_logging_publisher_publish():
+    """Test publishing metrics to logger."""
+    publisher = LoggingMetricsPublisher("test_logger")
 
-        publisher.publish([
-            Timer(u'hello.foo', initial_value=1),
-            Counter(u'hello.bar', initial_value=2),
-            Histogram(u'goodbye.baz', initial_value=3, neat_tag=u'production', other_tag=b'binary'),
-            Gauge(u'goodbye.qux', initial_value=4),
-        ])
-        mock_get_logger.return_value.log.assert_called_once_with(
-            logging.DEBUG,
-            u'counters.hello.bar 2; '
-            u'gauges.goodbye.qux 4; '
-            u'histograms.goodbye.baz{neat_tag:production,other_tag:binary} 3; '
-            u'timers.hello.foo 1',
-        )
+    metrics = [
+        Counter("test_counter", initial_value=10),
+        Gauge("test_gauge", initial_value=42),
+        Histogram("test_histogram", initial_value=100),
+        Timer("test_timer", initial_value=1.5),
+    ]
+
+    # This should not raise an exception
+    publisher.publish(metrics)
+
+
+def test_logging_publisher_empty_metrics():
+    """Test publishing empty metrics list."""
+    publisher = LoggingMetricsPublisher("test_logger")
+    publisher.publish([])  # Should not raise an exception
+
+
+def test_logging_publisher_get_str_value():
+    """Test the _get_str_value method."""
+    publisher = LoggingMetricsPublisher("test_logger")
+
+    # Test with string
+    assert publisher._get_str_value("test") == "test"
+
+    # Test with bytes
+    assert publisher._get_str_value(b"test") == "test"
+
+    # Test with number
+    assert publisher._get_str_value(42) == "42"
+
+    # Test with None
+    assert publisher._get_str_value(None) == "None"

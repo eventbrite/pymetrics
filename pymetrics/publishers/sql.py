@@ -1,150 +1,76 @@
-from __future__ import (
-    absolute_import,
-    unicode_literals,
-)
+from typing import Any, Generator, Iterable, Tuple
 
-import abc
-import logging
-from typing import (
-    Any,
-    Dict,
-    Generator,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    Type,
-)
-
-import six
-
-from pymetrics.instruments import (
-    Counter,
-    Gauge,
-    Histogram,
-    Metric,
-    Timer,
-)
+from pymetrics.instruments import Metric
 from pymetrics.publishers.base import MetricsPublisher
 
 
-__all__ = (
-    'SqlPublisher',
-)
-
-
-class SqlPublisher(MetricsPublisher):
+class SqlMetricsPublisher(MetricsPublisher):
     """
-    Abstract base class for publishers that publish to SQL databases of any type. Subclasses should implement all the
-    backend-specific logic.
+    A metrics publisher that stores metrics in a SQL database.
     """
 
-    database_type = None  # type: Optional[six.text_type]
-    """
-    The name of the database backend type, used when logging errors.
-    """
-
-    exception_type = Exception  # type: Type[Exception]
-    """
-    The base class of all possible SQL exceptions this backend could raise, used for catching exceptions in order to
-    log them.
-    """
-
-    @abc.abstractmethod
-    def initialize_if_necessary(self):  # type: () -> None
-        """Initialize the database connection, schema, etc., if necessary."""
-
-    @abc.abstractmethod
-    def execute_statement_multiple_times(self, statement, arguments):
-        # type: (six.text_type, Generator[Tuple[Any, ...], None, None]) -> None
+    def __init__(self, connection_factory, database_type=None):
+        # type: (callable, str) -> None
         """
-        Execute a given statement multiple times (possibly prepared) using the given generator of argument tuples.
+        Initialize the publisher.
 
-        :param statement: The SQL statement
-        :param arguments: A generator of tuples of arguments, one tuple for each time the statement should be executed
+        :param connection_factory: A factory function that returns a database connection
+        :param database_type: The type of database (e.g., 'postgresql', 'mysql')
         """
+        self.connection_factory = connection_factory
+        self.database_type = database_type
 
-    def publish(self, metrics, error_logger=None, enable_meta_metrics=False):
-        # type: (Iterable[Metric], six.text_type, bool) -> None
+    def publish(self, metrics, flush=True):
+        # type: (Iterable[Metric], bool) -> None
+        """
+        Store metrics in the SQL database.
+
+        :param metrics: The metrics to publish
+        :param flush: Whether to flush (ignored)
+        """
         if not metrics:
             return
 
-        counters = []  # type: List[Counter]
-        gauges = {}  # type: Dict[six.text_type, Gauge]
-        timers = []  # type: List[Timer]
-        histograms = []  # type: List[Histogram]
-
-        for metric in metrics:
-            if metric.value is None:
-                continue
-
-            if isinstance(metric, Counter):
-                counters.append(metric)
-            elif isinstance(metric, Gauge):
-                gauges[metric.name] = metric
-            elif isinstance(metric, Timer):
-                timers.append(metric)
-            elif isinstance(metric, Histogram):
-                histograms.append(metric)
-
-        self.initialize_if_necessary()
-
-        # noinspection PyBroadException
+        connection = self.connection_factory()
         try:
-            if counters:
-                self.insert_counters(counters)
-        except self.exception_type:
-            if error_logger:
-                logging.getLogger(error_logger).exception('Failed to send counters to {}'.format(self.database_type))
+            for metric in metrics:
+                if metric.value is None:
+                    continue
 
-        # noinspection PyBroadException
+                # Determine metric type
+                if hasattr(metric, '__class__'):
+                    metric_type = metric.__class__.__name__.lower()
+                else:
+                    metric_type = 'unknown'
+
+                # Convert tags to string
+                tags_str = None
+                if hasattr(metric, 'tags') and metric.tags:
+                    tags_str = str(metric.tags)
+
+                # Insert the metric
+                connection.execute(
+                    'INSERT INTO metrics (name, value, metric_type, tags) VALUES (%s, %s, %s, %s)',
+                    (metric.name, metric.value, metric_type, tags_str)
+                )
+
+            connection.commit()
+        finally:
+            connection.close()
+
+    def get_metrics(self):
+        # type: (str, Generator[Tuple[Any, ...], None, None]) -> None
+        """
+        Get all stored metrics.
+
+        :param database_name: The database name
+        :return: A generator of metric tuples
+        """
+        connection = self.connection_factory()
         try:
-            if gauges:
-                self.insert_or_update_gauges(gauges.values())
-        except self.exception_type:
-            if error_logger:
-                logging.getLogger(error_logger).exception('Failed to send gauges to {}'.format(self.database_type))
-
-        # noinspection PyBroadException
-        try:
-            if timers:
-                self.insert_timers(timers)
-        except self.exception_type:
-            if error_logger:
-                logging.getLogger(error_logger).exception('Failed to send timers to {}'.format(self.database_type))
-
-        # noinspection PyBroadException
-        try:
-            if histograms:
-                self.insert_histograms(histograms)
-        except self.exception_type:
-            if error_logger:
-                logging.getLogger(error_logger).exception('Failed to send histograms to {}'.format(self.database_type))
-
-    def insert_counters(self, counters):  # type: (Iterable[Counter]) -> None
-        # noinspection SqlNoDataSourceInspection,SqlResolve
-        self.execute_statement_multiple_times(
-            'INSERT INTO pymetrics_counters (metric_name, metric_value) VALUES (?, ?);',
-            ((c.name, c.value) for c in counters),
-        )
-
-    def insert_or_update_gauges(self, gauges):  # type: (Iterable[Gauge]) -> None
-        # noinspection SqlNoDataSourceInspection,SqlResolve
-        self.execute_statement_multiple_times(
-            'REPLACE INTO pymetrics_gauges (metric_name, metric_value) VALUES (?, ?);',
-            ((g.name, g.value) for g in gauges),
-        )
-
-    def insert_timers(self, timers):  # type: (Iterable[Timer]) -> None
-        # noinspection SqlNoDataSourceInspection,SqlResolve
-        self.execute_statement_multiple_times(
-            'INSERT INTO pymetrics_timers (metric_name, metric_value) VALUES (?, ?);',
-            ((t.name, (float(t.value) / t.resolution)) for t in timers if t.value is not None),
-        )
-
-    def insert_histograms(self, histograms):  # type: (Iterable[Histogram]) -> None
-        # noinspection SqlNoDataSourceInspection,SqlResolve
-        self.execute_statement_multiple_times(
-            'INSERT INTO pymetrics_histograms (metric_name, metric_value) VALUES (?, ?);',
-            ((h.name, h.value) for h in histograms),
-        )
+            cursor = connection.cursor()
+            cursor.execute('SELECT * FROM metrics ORDER BY timestamp DESC')
+            for row in cursor:
+                yield row
+        finally:
+            connection.close()

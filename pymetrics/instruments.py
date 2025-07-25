@@ -1,8 +1,3 @@
-from __future__ import (
-    absolute_import,
-    unicode_literals,
-)
-
 import enum
 import time
 from typing import (
@@ -14,9 +9,6 @@ from typing import (
     TypeVar,
     Union,
 )
-
-import six
-
 
 try:
     from typing import Literal  # type: ignore
@@ -37,13 +29,10 @@ __all__ = (
 
 R = TypeVar('R')
 
-Tag = Union[six.text_type, six.binary_type, int, float, bool, None]
+Tag = Union[str, bytes, int, float, bool, None]
 
 
 _valid_initial_values = (int, float)  # type: Tuple[Type, ...]
-if six.PY2:
-    # noinspection PyUnresolvedReferences
-    _valid_initial_values += (long, )  # noqa: F821
 
 
 class Metric(object):
@@ -52,7 +41,7 @@ class Metric(object):
     """
 
     def __init__(self, name, initial_value=0, **tags):
-        # type: (six.text_type, Union[int, float], **Tag) -> None
+        # type: (str, Union[int, float], **Tag) -> None
         """
         Construct a metric.
 
@@ -63,7 +52,7 @@ class Metric(object):
         """
         if self.__class__ == Metric:
             raise TypeError('Cannot instantiate abstract class "Metric"')
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, str):
             raise TypeError('Metric names must be non-null strings')
         if not isinstance(initial_value, _valid_initial_values):
             raise TypeError('Metric values must be integers or floats')
@@ -101,47 +90,49 @@ class Metric(object):
 
 class Counter(Metric):
     """
-    A counter, for counting the number of times some thing has happened.
+    A counter metric that can only be incremented. Cannot be decremented or reset to a value less than the current
+    value.
     """
 
-    def __init__(self, name, initial_value=0, **tags):  # type: (six.text_type, int, **Tag) -> None
+    def __init__(self, name, initial_value=0, **tags):  # type: (str, int, **Tag) -> None
         """
         Construct a counter.
 
-        :param name: The counter name
-        :param initial_value: The initial value of this counter, which may be only an integer
-        :param tags: The tags associated with this counter (not that not all publishers will support tags)
+        :param name: The metric name
+        :param initial_value: The initial value of this counter, which must be a non-negative integer
+        :param tags: The tags associated with this metric
         """
-        if not isinstance(initial_value, six.integer_types) or initial_value < 0:
-            raise TypeError('Counter values must be non-null, non-negative integers')
-
-        super(Counter, self).__init__(name, int(initial_value), **tags)
+        if not isinstance(initial_value, int) or initial_value < 0:
+            raise TypeError('Counter initial values must be non-negative integers')
+        super(Counter, self).__init__(name, initial_value, **tags)
 
     def increment(self, amount=1):  # type: (int) -> int
         """
-        Increments this counter's value by the specified amount.
+        Increment this counter by the specified amount.
 
-        :param amount: The amount by which to increment the counter, defaults to 1
+        :param amount: The amount to increment by (must be positive)
 
-        :return: The new value
+        :return: The new value of this counter
         """
+        if amount <= 0:
+            raise ValueError('Counter increments must be positive')
         self._value += amount
         return self.value
 
     def reset(self, value=None):  # type: (Optional[int]) -> int
         """
-        Resets this counter to the specified value or the initial value if not specified.
+        Reset this counter to the specified value, or to its initial value if no value is specified.
 
-        :param value: The value to which to reset this counter, which defaults to the initial value if not specified
+        :param value: The value to reset to (must be non-negative)
 
-        :return: The new value
+        :return: The new value of this counter
         """
-        if value is None:
-            self._value = self._initial_value
+        if value is not None:
+            if not isinstance(value, int) or value < 0:
+                raise TypeError('Counter values must be non-negative integers')
+            self._value = value
         else:
-            if value < 0:
-                raise ValueError('Counters allow only non-negative integers')
-            self._value = int(value)
+            self._value = self._initial_value
         return self.value
 
     @property
@@ -155,8 +146,8 @@ class Counter(Metric):
 
     def record_over_function(self, f, *args, **kwargs):  # type: (Callable[..., R], *Any, **Any) -> R
         """
-        Increments this counter and then calls the specified callable with the specified positional and keyword
-        arguments.
+        Records this counter around calling the specified callable with the specified positional and keyword arguments.
+        The counter is incremented by 1 before the callable is invoked.
 
         :param f: The callable to invoke
         :param args: The positional arguments to pass to the callable
@@ -170,24 +161,24 @@ class Counter(Metric):
 
 class Histogram(Metric):
     """
-    A histogram is a metric for tracking an arbitrary number of something per named activity.
+    A histogram metric that tracks the distribution of values.
     """
 
     def set(self, value=None):  # type: (Optional[Union[int, float]]) -> int
         """
-        Sets this histogram to the specified value or the initial value if not specified.
+        Set the value of this histogram.
 
-        :param value: The value to which to set this histogram, which defaults to the initial value if not specified
+        :param value: The value to set (if None, the histogram is reset to its initial value)
 
-        :return: The new value
+        :return: The new value of this histogram
         """
         if value is None:
             self._value = self._initial_value
         else:
-            if value < 0:
-                raise ValueError('Histograms allow only non-negative values')
+            if not isinstance(value, _valid_initial_values):
+                raise TypeError('Histogram values must be integers or floats')
             self._value = value
-        return self.value if self.value is not None else 0  # actually not possible to be None here, but satisfy MyPy
+        return self.value
 
 
 class TimerResolution(enum.IntEnum):
@@ -207,100 +198,79 @@ class TimerResolution(enum.IntEnum):
 
 class Timer(Histogram):
     """
-    A timer is simply a specialized histogram that tracks the arbitrary number of milliseconds, microseconds, or
-    nanoseconds per named activity. A single timer instance can be restarted and re-stopped repeatedly, and its value
-    will accumulate/increase by the elapsed time each time the timer is stopped. Only if the timer has never been
-    started and stopped will the initial or set value be used for publication.
+    A timer metric that tracks the duration of operations.
     """
 
     def __init__(self, name, initial_value=0, resolution=TimerResolution.MILLISECONDS, **tags):
-        # type: (six.text_type, Union[int, float], TimerResolution, **Tag) -> None
+        # type: (str, Union[int, float], TimerResolution, **Tag) -> None
         """
         Construct a timer.
 
-        :param name: The timer name
-        :param initial_value: The initial value of this timer, which may be an integer or a float (which will be
-                              rounded)
-        :param resolution: The resolution of this timer, which if unset defaults to milliseconds, controls how the
-                           value is published (it is multiplied by the resolution factor and then rounded to an
-                           integer). It does not affect the initial value, only the value recorded with `start` /
-                           `stop` and context manager usage
-        :param tags: The tags associated with this timer (not that not all publishers will support tags)
+        :param name: The metric name
+        :param initial_value: The initial value of this timer, which must be a non-negative number
+        :param resolution: The resolution to use when publishing this timer
+        :param tags: The tags associated with this metric
         """
+        if not isinstance(initial_value, _valid_initial_values) or initial_value < 0:
+            raise TypeError('Timer initial values must be non-negative numbers')
+        if not isinstance(resolution, TimerResolution):
+            raise TypeError('Timer resolution must be a TimerResolution enum value')
         super(Timer, self).__init__(name, initial_value, **tags)
-
-        self._start_time = None  # type: Optional[float]
-        self._running_value = 0.0
-
-        if self._initial_value and self._initial_value > 0:
-            self._value = self._initial_value
-
-        self.resolution = resolution
-
-        self.start()
+        self._resolution = resolution
+        self._start_time = None
 
     def start(self):  # type: () -> None
         """
-        Starts the timer.
+        Start timing an operation.
         """
         self._start_time = time.time()
 
     def stop(self):  # type: () -> None
         """
-        Stops the timer.
+        Stop timing an operation and record the elapsed time.
         """
         if self._start_time is None:
-            return  # Cannot stop a timer before it has started
-        self._running_value += time.time() - self._start_time
+            raise RuntimeError('Timer was not started')
+        elapsed = time.time() - self._start_time
+        self.set(elapsed)
         self._start_time = None
 
     @property
     def value(self):  # type: () -> Optional[int]
         """
-        If the timer has been started and stopped, this returns the total elapsed time of the timer multiplied by the
-        resolution and rounded to an integer. Otherwise, this returns the set or initial value of the timer, not
-        multiplied, but rounded to an integer.
+        Returns the value of this timer, converted to the specified resolution.
 
-        :return: The timer value
+        :return: The timer value in the specified resolution
         """
-        if self._running_value > 0 and not self._start_time:
-            # If the timer is not currently running but it has previously run, return that amount times the resolution
-            # noinspection PyTypeChecker
-            return int(round(self._running_value * self.resolution))
-
-        if self._value:
-            # Set from initial value, assume the resolution was already correct
-            return int(round(float(self._value)))
-
-        return None
+        if self._value is None:
+            return None
+        return int(round(float(self._value) * self._resolution))
 
     def __enter__(self):  # type: () -> Timer
         """
-        Starts the timer at the start of a `with` block.
+        Context manager entry point.
 
-        :return: `self`
+        :return: This timer
         """
         self.start()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):  # type: (Any, Any, Any) -> Literal[False]
         """
-        Stops the timer at the end of a `with` block, regardless of whether an exception occurred.
+        Context manager exit point.
 
-        :param exc_type: Ignored
-        :param exc_value: Ignored
-        :param traceback: Ignored
+        :param exc_type: The exception type (if any)
+        :param exc_value: The exception value (if any)
+        :param traceback: The traceback (if any)
 
-        :return: `False`
+        :return: False to allow exceptions to propagate
         """
         self.stop()
-        # noinspection PyTypeChecker
         return False
 
     def record_over_function(self, f, *args, **kwargs):  # type: (Callable[..., R], *Any, **Any) -> R
         """
-        Starts this timer, calls the specified callable with the specified positional and keyword arguments, and then
-        stops this timer.
+        Records this timer around calling the specified callable with the specified positional and keyword arguments.
 
         :param f: The callable to invoke
         :param args: The positional arguments to pass to the callable
@@ -314,35 +284,33 @@ class Timer(Histogram):
 
 class Gauge(Metric):
     """
-    A gauge is a metric for tracking the ongoing state of something, such as number of items waiting in a queue, size
-    of a database or file system, etc.
+    A gauge metric that can be set to any value.
     """
 
-    def __init__(self, name, initial_value=0, **tags):  # type: (six.text_type, int, **Tag) -> None
+    def __init__(self, name, initial_value=0, **tags):  # type: (str, int, **Tag) -> None
         """
         Construct a gauge.
 
-        :param name: The gauge name
-        :param initial_value: The initial value of this gauge, which may be an integer
-        :param tags: The tags associated with this gauge (not that not all publishers will support tags)
+        :param name: The metric name
+        :param initial_value: The initial value of this gauge, which must be a non-negative integer
+        :param tags: The tags associated with this metric
         """
-        if not isinstance(initial_value, six.integer_types) or initial_value < 0:
-            raise TypeError('Gauge values must be non-null, non-negative integers')
-
+        if not isinstance(initial_value, int) or initial_value < 0:
+            raise TypeError('Gauge initial values must be non-negative integers')
         super(Gauge, self).__init__(name, initial_value, **tags)
 
     def set(self, value=None):  # type: (Optional[int]) -> int
         """
-        Sets this gauge to the specified value or the initial value if not specified.
+        Set the value of this gauge.
 
-        :param value: The value to which to set this gauge, which defaults to the initial value if not specified
+        :param value: The value to set (if None, the gauge is reset to its initial value)
 
-        :return: The new value
+        :return: The new value of this gauge
         """
         if value is None:
             self._value = self._initial_value
         else:
-            if value < 0:
-                raise ValueError('Gauges allow only non-negative integers')
+            if not isinstance(value, int) or value < 0:
+                raise TypeError('Gauge values must be non-negative integers')
             self._value = value
-        return self.value if self.value is not None else 0  # actually not possible to be None here, but satisfy MyPy
+        return self.value

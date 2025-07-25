@@ -1,151 +1,150 @@
-from __future__ import (
-    absolute_import,
-    unicode_literals,
-)
-
-import contextlib
 import sqlite3
-from typing import (
-    Any,
-    Generator,
-    Optional,
-    Tuple,
-    cast,
-)
+from typing import Any, Generator, Tuple
 
-from conformity import fields
-import six
-
-from pymetrics.publishers.sql import SqlPublisher
+from pymetrics.instruments import Metric
+from pymetrics.publishers.base import MetricsPublisher
 
 
-__all__ = (
-    'SqlitePublisher',
-)
+MEMORY_DATABASE_NAME = ':memory:'
 
 
-class Sqlite3Connection(sqlite3.Connection):
+class Sqlite3Connection(object):
     """
-    An extension to the base connection. The base class is a pure C class on whose instances you can't call setattr.
-    This extension enables the use of setattr on connection objects.
+    A wrapper around sqlite3.Connection to provide a consistent interface.
     """
 
+    def __init__(self, database_name=MEMORY_DATABASE_NAME, use_uri=False):
+        # type: (str, bool) -> None
+        """
+        Initialize the connection.
 
-@fields.ClassConfigurationSchema.provider(fields.Dictionary(
-    {
-        'database_name': fields.UnicodeString(description='The name of the Sqlite database to use'),
-        'use_uri': fields.Boolean(
-            description='Whether the database name should be treated as a URI (Python 3+ only)',
-        ),
-    },
-    optional_keys=('database_name', 'use_uri'),
-))
-class SqlitePublisher(SqlPublisher):
+        :param database_name: The database name or path
+        :param use_uri: Whether to use URI format
+        """
+        if use_uri:
+            self.connection = sqlite3.connect(database_name, uri=True)
+        else:
+            self.connection = sqlite3.connect(database_name)
+
+    def execute(self, sql, parameters=None):
+        # type: (str, Tuple[Any, ...]) -> None
+        """
+        Execute a SQL statement.
+
+        :param sql: The SQL statement
+        :param parameters: The parameters for the statement
+        """
+        if parameters:
+            self.connection.execute(sql, parameters)
+        else:
+            self.connection.execute(sql)
+
+    def commit(self):
+        """Commit the current transaction."""
+        self.connection.commit()
+
+    def close(self):
+        """Close the connection."""
+        self.connection.close()
+
+
+class SqliteMetricsPublisher(MetricsPublisher):
     """
-    A publisher that emits metrics to a Sqlite database file or in-memory database. Especially useful for use in tests
-    where you need to actually evaluate your metrics.
+    A metrics publisher that stores metrics in SQLite.
     """
 
-    database_type = 'Sqlite'
-    exception_type = sqlite3.Error
+    def __init__(self, database_name=MEMORY_DATABASE_NAME, use_uri=False):
+        # type: (str, bool) -> None
+        """
+        Initialize the publisher.
 
-    MEMORY_DATABASE_NAME = ':memory:'
-
-    _memory_connection = None  # type: Optional[Sqlite3Connection]
-
-    def __init__(self, database_name=MEMORY_DATABASE_NAME, use_uri=False):  # type: (six.text_type, bool) -> None
-        if six.PY2 and use_uri:
-            raise ValueError('Argument use_uri can only be used in Python 3 and higher')
-
+        :param database_name: The database name or path
+        :param use_uri: Whether to use URI format
+        """
         self.database_name = database_name
         self.use_uri = use_uri
-        self.connection = None  # type: Optional[Sqlite3Connection]
+        self._create_tables()
 
-    @staticmethod
-    @contextlib.contextmanager
-    def connection_context(connection):  # type: (sqlite3.Connection) -> Generator[sqlite3.Cursor, None, None]
-        with connection:
-            cursor = None
-            try:
-                cursor = connection.cursor()
-                yield cursor
-            finally:
-                if cursor:
-                    cursor.close()
+    def _create_tables(self):
+        # type: () -> None
+        """Create the necessary tables."""
+        connection = self._get_connection()
+        try:
+            connection.execute('''
+                CREATE TABLE IF NOT EXISTS metrics (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    value INTEGER NOT NULL,
+                    metric_type TEXT NOT NULL,
+                    tags TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            connection.commit()
+        finally:
+            connection.close()
 
-    @contextlib.contextmanager
-    def database_context(self):  # type: () -> Generator[sqlite3.Cursor, None, None]
-        if not self.connection:
-            raise ValueError('Call to database_context before database connection established')
-        with self.connection_context(self.connection) as cursor:
-            yield cursor
+    def _get_connection(self):
+        # type: (str, bool) -> Sqlite3Connection
+        """
+        Get a database connection.
 
-    def initialize_if_necessary(self):  # type: () -> None
-        if not self.connection:
-            self.connection = self.get_connection(self.database_name, self.use_uri)
+        :param database_name: The database name
+        :param use_uri: Whether to use URI format
+        :return: A database connection
+        """
+        return Sqlite3Connection(self.database_name, self.use_uri)
 
-        if not getattr(self.connection, '_pymetrics_initialized', None):
-            with self.database_context() as cursor:
-                # noinspection SqlNoDataSourceInspection,SqlResolve
-                cursor.execute("SELECT name FROM sqlite_master WHERE name='pymetrics_counters';")
-                needs_schema = cursor.fetchone() is None
+    def publish(self, metrics, flush=True):
+        # type: (Iterable[Metric], bool) -> None
+        if not metrics:
+            return
+        connection = self._get_connection()
+        try:
+            # Create tables if they don't exist
+            connection.execute('''
+                CREATE TABLE IF NOT EXISTS metrics (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    value INTEGER NOT NULL,
+                    metric_type TEXT NOT NULL,
+                    tags TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            connection.commit()
 
-            if needs_schema:
-                with self.database_context() as cursor:
-                    # noinspection SqlNoDataSourceInspection
-                    cursor.executescript("""
-CREATE TABLE pymetrics_counters (id INTEGER PRIMARY KEY, metric_name TEXT NOT NULL, metric_value INTEGER NOT NULL);
+            for metric in metrics:
+                if metric.value is None:
+                    continue
+                if hasattr(metric, '__class__'):
+                    metric_type = metric.__class__.__name__.lower()
+                else:
+                    metric_type = 'unknown'
+                tags_str = None
+                if hasattr(metric, 'tags') and metric.tags:
+                    tags_str = str(metric.tags)
+                connection.execute(
+                    'INSERT INTO metrics (name, value, metric_type, tags) VALUES (?, ?, ?, ?)',
+                    (metric.name, metric.value, metric_type, tags_str)
+                )
+            connection.commit()
+        finally:
+            connection.close()
 
-CREATE TABLE pymetrics_gauges (id INTEGER PRIMARY KEY, metric_name TEXT NOT NULL UNIQUE, metric_value INTEGER NOT NULL);
+    def get_metrics(self):
+        # type: (str, bool) -> Generator[Tuple[Any, ...], None, None]
+        """
+        Get all stored metrics.
 
-CREATE TABLE pymetrics_timers (id INTEGER PRIMARY KEY, metric_name TEXT NOT NULL, metric_value REAL NOT NULL);
-
-CREATE TABLE pymetrics_histograms (id INTEGER PRIMARY KEY, metric_name TEXT NOT NULL, metric_value INTEGER NOT NULL);
-""")
-
-            setattr(self.connection, '_pymetrics_initialized', True)
-
-    @classmethod
-    def get_connection(cls, database_name=MEMORY_DATABASE_NAME, use_uri=False):
-        # type: (six.text_type, bool) -> Sqlite3Connection
-        if six.PY2 and use_uri:
-            raise ValueError('Argument use_uri can only be used in Python 3 and higher')
-
-        if database_name == cls.MEMORY_DATABASE_NAME and cls._memory_connection:
-            # We only want a single in-memory connection per Python instance
-            return cls._memory_connection
-
-        kwargs = {}
-        if use_uri:
-            kwargs['uri'] = True
-
-        connection = cast(Sqlite3Connection, sqlite3.connect(
-            database_name,
-            factory=Sqlite3Connection,
-            timeout=0.1,
-            isolation_level=None,
-            check_same_thread=False,
-            **kwargs
-        ))
-        connection.row_factory = sqlite3.Row
-
-        if database_name == cls.MEMORY_DATABASE_NAME:
-            cls._memory_connection = connection
-
-        return connection
-
-    def execute_statement_multiple_times(self, statement, arguments):
-        # type: (six.text_type, Generator[Tuple[Any, ...], None, None]) -> None
-        with self.database_context() as cursor:
-            cursor.executemany(statement, arguments)
-
-    @classmethod
-    def clear_metrics_from_database(cls, connection):  # type: (sqlite3.Connection) -> None
-        with cls.connection_context(connection) as cursor:
-            # noinspection SqlNoDataSourceInspection,SqlResolve,SqlWithoutWhere
-            cursor.executescript("""
-DELETE FROM pymetrics_counters;
-DELETE FROM pymetrics_gauges;
-DELETE FROM pymetrics_timers;
-DELETE FROM pymetrics_histograms;
-""")
+        :param database_name: The database name
+        :param use_uri: Whether to use URI format
+        :return: A generator of metric tuples
+        """
+        connection = self._get_connection()
+        try:
+            cursor = connection.connection.execute('SELECT * FROM metrics ORDER BY timestamp DESC')
+            for row in cursor:
+                yield row
+        finally:
+            connection.close()
