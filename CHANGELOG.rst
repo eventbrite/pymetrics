@@ -1,6 +1,10 @@
 Changelog
 =========
 
+2.0.0 (2025-07-28)
+------------------
+- Python upgrade to 3.12
+
 1.0.10 (2023-11-28)
 -------------------
 - [PATCH] Use Ubuntu 20 for newer OpenSSL
