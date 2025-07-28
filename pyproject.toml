@@ -145,6 +145,9 @@ exclude = [
     "*.egg-info/*",
     ".tox",
 ]
+ignore = [
+    "F401",  # imported but unused - many are type annotations
+]
 
 [tool.isort]
 profile = "black"

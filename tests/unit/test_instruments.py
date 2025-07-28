@@ -1,6 +1,12 @@
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
+
 import datetime
-import pytest
 from unittest import mock
+
+import pytest
 
 from pymetrics.instruments import (
     Counter,
@@ -212,6 +218,7 @@ def test_metric_value_property():
 
 def test_metric_record_over_function_unsupported():
     """Test that base Metric record_over_function raises TypeError."""
+
     # Create a subclass that doesn't override record_over_function
     class TestMetric(Metric):
         pass
@@ -242,12 +249,7 @@ def test_timer_context_manager_exception():
 
 def test_metric_with_complex_tags():
     """Test metric with complex tag values."""
-    counter = Counter("test_counter",
-                     string_tag="value",
-                     int_tag=42,
-                     float_tag=3.14,
-                     bool_tag=True,
-                     none_tag=None)
+    counter = Counter("test_counter", string_tag="value", int_tag=42, float_tag=3.14, bool_tag=True, none_tag=None)
     assert counter.tags["string_tag"] == "value"
     assert counter.tags["int_tag"] == 42
     assert counter.tags["float_tag"] == 3.14

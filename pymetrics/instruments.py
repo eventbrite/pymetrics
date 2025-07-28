@@ -1,3 +1,8 @@
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
+
 import enum
 import time
 from typing import (
@@ -10,6 +15,7 @@ from typing import (
     Union,
 )
 
+
 try:
     from typing import Literal  # type: ignore
 except ImportError:
@@ -17,17 +23,17 @@ except ImportError:
 
 
 __all__ = (
-    'Counter',
-    'Gauge',
-    'Histogram',
-    'Metric',
-    'Tag',
-    'Timer',
-    'TimerResolution',
+    "Counter",
+    "Gauge",
+    "Histogram",
+    "Metric",
+    "Tag",
+    "Timer",
+    "TimerResolution",
 )
 
 
-R = TypeVar('R')
+R = TypeVar("R")
 
 Tag = Union[str, bytes, int, float, bool, None]
 
@@ -53,9 +59,9 @@ class Metric(object):
         if self.__class__ == Metric:
             raise TypeError('Cannot instantiate abstract class "Metric"')
         if not isinstance(name, str):
-            raise TypeError('Metric names must be non-null strings')
+            raise TypeError("Metric names must be non-null strings")
         if not isinstance(initial_value, _valid_initial_values):
-            raise TypeError('Metric values must be integers or floats')
+            raise TypeError("Metric values must be integers or floats")
 
         self.name = name
         self._initial_value = initial_value
@@ -82,7 +88,7 @@ class Metric(object):
 
         :return: The value the callable returns, unaltered
         """
-        raise TypeError('{}s do not support use as a decorator'.format(self.__class__.__name__))
+        raise TypeError("{}s do not support use as a decorator".format(self.__class__.__name__))
 
     def __repr__(self):
         return '{}(name="{}", value={})'.format(self.__class__.__name__, self.name, self.value)
@@ -103,7 +109,7 @@ class Counter(Metric):
         :param tags: The tags associated with this metric
         """
         if not isinstance(initial_value, int) or initial_value < 0:
-            raise TypeError('Counter initial values must be non-negative integers')
+            raise TypeError("Counter initial values must be non-negative integers")
         super(Counter, self).__init__(name, initial_value, **tags)
 
     def increment(self, amount=1):  # type: (int) -> int
@@ -115,7 +121,7 @@ class Counter(Metric):
         :return: The new value of this counter
         """
         if amount <= 0:
-            raise ValueError('Counter increments must be positive')
+            raise ValueError("Counter increments must be positive")
         self._value += amount
         return self.value
 
@@ -129,7 +135,7 @@ class Counter(Metric):
         """
         if value is not None:
             if not isinstance(value, int) or value < 0:
-                raise TypeError('Counter values must be non-negative integers')
+                raise TypeError("Counter values must be non-negative integers")
             self._value = value
         else:
             self._value = self._initial_value
@@ -176,7 +182,7 @@ class Histogram(Metric):
             self._value = self._initial_value
         else:
             if not isinstance(value, _valid_initial_values):
-                raise TypeError('Histogram values must be integers or floats')
+                raise TypeError("Histogram values must be integers or floats")
             self._value = value
         return self.value
 
@@ -212,9 +218,9 @@ class Timer(Histogram):
         :param tags: The tags associated with this metric
         """
         if not isinstance(initial_value, _valid_initial_values) or initial_value < 0:
-            raise TypeError('Timer initial values must be non-negative numbers')
+            raise TypeError("Timer initial values must be non-negative numbers")
         if not isinstance(resolution, TimerResolution):
-            raise TypeError('Timer resolution must be a TimerResolution enum value')
+            raise TypeError("Timer resolution must be a TimerResolution enum value")
         super(Timer, self).__init__(name, initial_value, **tags)
         self._resolution = resolution
         self._start_time = None
@@ -230,7 +236,7 @@ class Timer(Histogram):
         Stop timing an operation and record the elapsed time.
         """
         if self._start_time is None:
-            raise RuntimeError('Timer was not started')
+            raise RuntimeError("Timer was not started")
         elapsed = time.time() - self._start_time
         self.set(elapsed)
         self._start_time = None
@@ -296,7 +302,7 @@ class Gauge(Metric):
         :param tags: The tags associated with this metric
         """
         if not isinstance(initial_value, int) or initial_value < 0:
-            raise TypeError('Gauge initial values must be non-negative integers')
+            raise TypeError("Gauge initial values must be non-negative integers")
         super(Gauge, self).__init__(name, initial_value, **tags)
 
     def set(self, value=None):  # type: (Optional[int]) -> int
@@ -311,6 +317,6 @@ class Gauge(Metric):
             self._value = self._initial_value
         else:
             if not isinstance(value, int) or value < 0:
-                raise TypeError('Gauge values must be non-negative integers')
+                raise TypeError("Gauge values must be non-negative integers")
             self._value = value
         return self.value

@@ -1,4 +1,14 @@
-from typing import Any, Generator, Iterable, Tuple
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
+
+from typing import (
+    Any,
+    Generator,
+    Iterable,
+    Tuple,
+)
 
 from pymetrics.instruments import Metric
 from pymetrics.publishers.base import MetricsPublisher
@@ -38,20 +48,20 @@ class SqlMetricsPublisher(MetricsPublisher):
                     continue
 
                 # Determine metric type
-                if hasattr(metric, '__class__'):
+                if hasattr(metric, "__class__"):
                     metric_type = metric.__class__.__name__.lower()
                 else:
-                    metric_type = 'unknown'
+                    metric_type = "unknown"
 
                 # Convert tags to string
                 tags_str = None
-                if hasattr(metric, 'tags') and metric.tags:
+                if hasattr(metric, "tags") and metric.tags:
                     tags_str = str(metric.tags)
 
                 # Insert the metric
                 connection.execute(
-                    'INSERT INTO metrics (name, value, metric_type, tags) VALUES (%s, %s, %s, %s)',
-                    (metric.name, metric.value, metric_type, tags_str)
+                    "INSERT INTO metrics (name, value, metric_type, tags) VALUES (%s, %s, %s, %s)",
+                    (metric.name, metric.value, metric_type, tags_str),
                 )
 
             connection.commit()
@@ -69,7 +79,7 @@ class SqlMetricsPublisher(MetricsPublisher):
         connection = self.connection_factory()
         try:
             cursor = connection.cursor()
-            cursor.execute('SELECT * FROM metrics ORDER BY timestamp DESC')
+            cursor.execute("SELECT * FROM metrics ORDER BY timestamp DESC")
             for row in cursor:
                 yield row
         finally:

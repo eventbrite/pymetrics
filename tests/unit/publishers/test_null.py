@@ -1,6 +1,14 @@
-import pytest
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
 
-from pymetrics.instruments import Counter, Gauge, Histogram, Timer
+from pymetrics.instruments import (
+    Counter,
+    Gauge,
+    Histogram,
+    Timer,
+)
 from pymetrics.publishers.null import NullMetricsPublisher
 
 

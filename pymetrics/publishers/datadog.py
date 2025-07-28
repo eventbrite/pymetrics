@@ -1,4 +1,15 @@
-from typing import Dict, Iterable, List, Optional, Union
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
+
+from typing import (
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Union,
+)
 
 from pymetrics.instruments import (
     Counter,
@@ -20,8 +31,8 @@ class DogStatsdPublisher(StatsdPublisher):
     For DogStatsd metric type suffixes, see https://docs.datadoghq.com/developers/dogstatsd/#datagram-format.
     """
 
-    METRIC_TYPE_HISTOGRAM = b'h'
-    METRIC_TYPE_DISTRIBUTION = b'd'
+    METRIC_TYPE_HISTOGRAM = b"h"
+    METRIC_TYPE_DISTRIBUTION = b"d"
 
     MAXIMUM_PACKET_SIZE = 8000
     """
@@ -65,7 +76,7 @@ class DogStatsdPublisher(StatsdPublisher):
     def _generate_tag_string(
         cls,
         tags,  # type: Optional[Dict[str, Tag]]
-        existing_tags_string=b'',  # type: bytes
+        existing_tags_string=b"",  # type: bytes
     ):
         # type: (...) -> bytes
         """
@@ -91,8 +102,8 @@ class DogStatsdPublisher(StatsdPublisher):
                 tag_strings.append(f"{tag}:{value}")
 
         if tag_strings:
-            tag_string = '|#{}'.format(','.join(tag_strings))
-            return existing_tags_string + tag_string.encode('utf-8')
+            tag_string = "|#{}".format(",".join(tag_strings))
+            return existing_tags_string + tag_string.encode("utf-8")
 
         return existing_tags_string
 
@@ -125,12 +136,12 @@ class DogStatsdPublisher(StatsdPublisher):
             tags.update(self.global_tags)
             if isinstance(metric, Gauge) and self.extra_gauge_tags:
                 tags.update(self.extra_gauge_tags)
-            if hasattr(metric, 'tags') and metric.tags:
+            if hasattr(metric, "tags") and metric.tags:
                 tags.update(metric.tags)
 
             # Format the metric
             metric_str = f"{metric.name}:{metric.value}|{metric_type.decode('utf-8')}"
-            formatted_metric = metric_str.encode('utf-8')
+            formatted_metric = metric_str.encode("utf-8")
 
             # Add tags if any
             if tags:

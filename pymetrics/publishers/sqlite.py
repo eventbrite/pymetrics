@@ -1,11 +1,20 @@
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
+
 import sqlite3
-from typing import Any, Generator, Tuple
+from typing import (
+    Any,
+    Generator,
+    Tuple,
+)
 
 from pymetrics.instruments import Metric
 from pymetrics.publishers.base import MetricsPublisher
 
 
-MEMORY_DATABASE_NAME = ':memory:'
+MEMORY_DATABASE_NAME = ":memory:"
 
 
 class Sqlite3Connection(object):
@@ -70,7 +79,8 @@ class SqliteMetricsPublisher(MetricsPublisher):
         """Create the necessary tables."""
         connection = self._get_connection()
         try:
-            connection.execute('''
+            connection.execute(
+                """
                 CREATE TABLE IF NOT EXISTS metrics (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
@@ -79,7 +89,8 @@ class SqliteMetricsPublisher(MetricsPublisher):
                     tags TEXT,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            ''')
+            """
+            )
             connection.commit()
         finally:
             connection.close()
@@ -102,7 +113,8 @@ class SqliteMetricsPublisher(MetricsPublisher):
         connection = self._get_connection()
         try:
             # Create tables if they don't exist
-            connection.execute('''
+            connection.execute(
+                """
                 CREATE TABLE IF NOT EXISTS metrics (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
@@ -111,22 +123,23 @@ class SqliteMetricsPublisher(MetricsPublisher):
                     tags TEXT,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            ''')
+            """
+            )
             connection.commit()
 
             for metric in metrics:
                 if metric.value is None:
                     continue
-                if hasattr(metric, '__class__'):
+                if hasattr(metric, "__class__"):
                     metric_type = metric.__class__.__name__.lower()
                 else:
-                    metric_type = 'unknown'
+                    metric_type = "unknown"
                 tags_str = None
-                if hasattr(metric, 'tags') and metric.tags:
+                if hasattr(metric, "tags") and metric.tags:
                     tags_str = str(metric.tags)
                 connection.execute(
-                    'INSERT INTO metrics (name, value, metric_type, tags) VALUES (?, ?, ?, ?)',
-                    (metric.name, metric.value, metric_type, tags_str)
+                    "INSERT INTO metrics (name, value, metric_type, tags) VALUES (?, ?, ?, ?)",
+                    (metric.name, metric.value, metric_type, tags_str),
                 )
             connection.commit()
         finally:
@@ -143,7 +156,7 @@ class SqliteMetricsPublisher(MetricsPublisher):
         """
         connection = self._get_connection()
         try:
-            cursor = connection.connection.execute('SELECT * FROM metrics ORDER BY timestamp DESC')
+            cursor = connection.connection.execute("SELECT * FROM metrics ORDER BY timestamp DESC")
             for row in cursor:
                 yield row
         finally:

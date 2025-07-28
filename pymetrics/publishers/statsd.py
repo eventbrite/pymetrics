@@ -1,7 +1,16 @@
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
+
 import errno
 import logging
 import socket
-from typing import Iterable, List, Union
+from typing import (
+    Iterable,
+    List,
+    Union,
+)
 
 from pymetrics.instruments import (
     Counter,
@@ -31,10 +40,10 @@ class StatsdPublisher(MetricsPublisher):
     For Statsd metric type suffixes, see https://github.com/etsy/statsd/blob/master/docs/metric_types.md.
     """
 
-    METRIC_TYPE_COUNTER = b'c'
-    METRIC_TYPE_GAUGE = b'g'
-    METRIC_TYPE_HISTOGRAM = b'ms'
-    METRIC_TYPE_TIMER = b'ms'
+    METRIC_TYPE_COUNTER = b"c"
+    METRIC_TYPE_GAUGE = b"g"
+    METRIC_TYPE_HISTOGRAM = b"ms"
+    METRIC_TYPE_TIMER = b"ms"
 
     MAXIMUM_PACKET_SIZE = 65000
     """
@@ -70,7 +79,7 @@ class StatsdPublisher(MetricsPublisher):
         :return: The bytes representation
         """
         if isinstance(string, str):
-            return string.encode('utf-8')
+            return string.encode("utf-8")
         return string
 
     def get_formatted_metrics(self, metrics, enable_meta_metrics=False):
@@ -99,7 +108,7 @@ class StatsdPublisher(MetricsPublisher):
 
             # Format the metric
             metric_str = f"{metric.name}:{metric.value}|{metric_type.decode('utf-8')}"
-            formatted_metrics.append(metric_str.encode('utf-8'))
+            formatted_metrics.append(metric_str.encode("utf-8"))
 
         return formatted_metrics
 
@@ -119,14 +128,14 @@ class StatsdPublisher(MetricsPublisher):
             return
 
         # Join all metrics with newlines
-        payload = b'\n'.join(formatted_metrics)
+        payload = b"\n".join(formatted_metrics)
 
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
                 sock.settimeout(self.timeout)
                 sock.sendto(payload, (self.host, self.port))
         except (socket.error, OSError) as e:
-            logging.error('Failed to send metrics to Statsd: %s', e)
+            logging.error("Failed to send metrics to Statsd: %s", e)
 
     def _send_chunked_payload(self, payload, number_of_metrics, error_logger=None, enable_meta_metrics=False):
         # type: (bytes, int, str, bool) -> None
@@ -144,6 +153,4 @@ class StatsdPublisher(MetricsPublisher):
                 sock.sendto(payload, (self.host, self.port))
         except (socket.error, OSError) as e:
             if error_logger:
-                logging.getLogger(error_logger).error(
-                    'Failed to send %d metrics to Statsd: %s', number_of_metrics, e
-                )
+                logging.getLogger(error_logger).error("Failed to send %d metrics to Statsd: %s", number_of_metrics, e)

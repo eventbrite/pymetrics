@@ -1,9 +1,17 @@
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
+
 import logging
-from typing import Any, Dict, Optional
+from typing import (
+    Any,
+    Dict,
+    Optional,
+)
 
 import attr
 
-from pymetrics.instruments import Counter, Gauge, Histogram, Timer
 from pymetrics.publishers.base import MetricsPublisher
 from pymetrics.recorders.base import MetricsRecorder
 
@@ -29,7 +37,7 @@ class Configuration(object):
             self.recorder.record_counter(name, value, **tags)
         except Exception as e:
             if self._error_logger:
-                self._error_logger.error('Failed to record counter %s: %s', name, e)
+                self._error_logger.error("Failed to record counter %s: %s", name, e)
 
     def record_histogram(self, name, value, **tags):
         """Record a histogram metric."""
@@ -37,7 +45,7 @@ class Configuration(object):
             self.recorder.record_histogram(name, value, **tags)
         except Exception as e:
             if self._error_logger:
-                self._error_logger.error('Failed to record histogram %s: %s', name, e)
+                self._error_logger.error("Failed to record histogram %s: %s", name, e)
 
     def record_timer(self, name, value, resolution=None, **tags):
         """Record a timer metric."""
@@ -45,7 +53,7 @@ class Configuration(object):
             self.recorder.record_timer(name, value, resolution, **tags)
         except Exception as e:
             if self._error_logger:
-                self._error_logger.error('Failed to record timer %s: %s', name, e)
+                self._error_logger.error("Failed to record timer %s: %s", name, e)
 
     def record_gauge(self, name, value, **tags):
         """Record a gauge metric."""
@@ -53,7 +61,7 @@ class Configuration(object):
             self.recorder.record_gauge(name, value, **tags)
         except Exception as e:
             if self._error_logger:
-                self._error_logger.error('Failed to record gauge %s: %s', name, e)
+                self._error_logger.error("Failed to record gauge %s: %s", name, e)
 
     def publish(self, flush=True):
         """Publish all metrics to all publishers."""
@@ -63,7 +71,7 @@ class Configuration(object):
                 publisher.publish(metrics, flush)
         except Exception as e:
             if self._error_logger:
-                self._error_logger.error('Failed to publish metrics: %s', e)
+                self._error_logger.error("Failed to publish metrics: %s", e)
 
 
 def create_configuration(config_dict):

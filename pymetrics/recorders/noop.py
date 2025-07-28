@@ -1,6 +1,18 @@
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
+
 from typing import List
 
-from pymetrics.instruments import Counter, Gauge, Histogram, Metric, Timer, TimerResolution
+from pymetrics.instruments import (
+    Counter,
+    Gauge,
+    Histogram,
+    Metric,
+    Timer,
+    TimerResolution,
+)
 from pymetrics.recorders.base import MetricsRecorder
 
 

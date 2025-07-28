@@ -1,4 +1,5 @@
 """isort:skip_file"""
+
 import errno
 import re
 import socket
@@ -17,7 +18,7 @@ from pymetrics.publishers.statsd import StatsdPublisher
 
 
 # noinspection PyAttributeOutsideInit
-@mock.patch('pymetrics.publishers.statsd.logging')
+@mock.patch("pymetrics.publishers.statsd.logging")
 class TestStatsdPublisher(object):
     def setup_method(self, _method):
         self.sock = None
@@ -35,24 +36,24 @@ class TestStatsdPublisher(object):
 
     def _start_udp_socket(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind(('localhost', 0))
+        self.sock.bind(("localhost", 0))
         self.sock.settimeout(1.0)
         return self.sock.getsockname()[1]
 
     def test_maximum_packet_size_constructor(self, _mock_logging):
-        publisher = StatsdPublisher('127.0.0.1', 8125)
+        publisher = StatsdPublisher("127.0.0.1", 8125)
         assert publisher.maximum_packet_size == 65000
 
-        publisher = StatsdPublisher('127.0.0.1', 8125, maximum_packet_size=1400)
+        publisher = StatsdPublisher("127.0.0.1", 8125, maximum_packet_size=1400)
         assert publisher.maximum_packet_size == 1400
 
-        publisher = StatsdPublisher('127.0.0.1', 8125, maximum_packet_size=175000)
+        publisher = StatsdPublisher("127.0.0.1", 8125, maximum_packet_size=175000)
         assert publisher.maximum_packet_size == 65000
 
     def test_no_metrics_does_nothing(self, _mock_logging):
         port = self._start_udp_socket()
 
-        publisher = StatsdPublisher('127.0.0.1', port)
+        publisher = StatsdPublisher("127.0.0.1", port)
         publisher.publish([])
 
         self.all_received = True
@@ -61,7 +62,7 @@ class TestStatsdPublisher(object):
         # noinspection PyBroadException
         try:
             bad = self.sock.recv(4096)
-            raise AssertionError('Did not expect to receive any data, but received: {}'.format(bad))
+            raise AssertionError("Did not expect to receive any data, but received: {}".format(bad))
         except AssertionError:
             raise
         except Exception:
@@ -70,15 +71,15 @@ class TestStatsdPublisher(object):
     def test_no_metric_values_does_nothing(self, _mock_logging):
         port = self._start_udp_socket()
 
-        publisher = StatsdPublisher('127.0.0.1', port)
-        publisher.publish([Timer(u'hello')])
+        publisher = StatsdPublisher("127.0.0.1", port)
+        publisher.publish([Timer("hello")])
 
         self.all_received = True
 
         assert self.sock is not None
         # The new API sends metrics even with None values
         received = self.sock.recv(4096)
-        assert b'hello:0|ms' in received
+        assert b"hello:0|ms" in received
 
     def test_bytes(self, mock_logging):
         """
@@ -90,23 +91,25 @@ class TestStatsdPublisher(object):
         port = self._start_udp_socket()
 
         metrics = [
-            Counter('test_bytes.counter', initial_value=1),
-            Gauge('test_bytes.gauge', initial_value=17),
-            Histogram('test_bytes.histogram', initial_value=3),
-            Timer('test_bytes.timer', initial_value=1),
+            Counter("test_bytes.counter", initial_value=1),
+            Gauge("test_bytes.gauge", initial_value=17),
+            Histogram("test_bytes.histogram", initial_value=3),
+            Timer("test_bytes.timer", initial_value=1),
         ]  # type: List[Metric]
 
         self.all_received = False
 
-        publisher = StatsdPublisher('localhost', port)
+        publisher = StatsdPublisher("localhost", port)
         publisher.publish(metrics)
 
         # We want to make sure that no logging was called at all
         # We test it this way so that any unexpected calls are printed to the output
         if mock_logging.getLogger.return_value.error.called:
-            raise AssertionError('No errors should have been logged. Instead got: {}'.format(
-                mock_logging.getLogger.return_value.error.call_args_list
-            ))
+            raise AssertionError(
+                "No errors should have been logged. Instead got: {}".format(
+                    mock_logging.getLogger.return_value.error.call_args_list
+                )
+            )
 
         self.all_received = True
 
@@ -115,8 +118,7 @@ class TestStatsdPublisher(object):
 
         assert received is not None
         assert received == (
-            b'test_bytes.counter:1|c\ntest_bytes.gauge:17|g\n'
-            b'test_bytes.histogram:3|ms\ntest_bytes.timer:1000|ms'
+            b"test_bytes.counter:1|c\ntest_bytes.gauge:17|g\n" b"test_bytes.histogram:3|ms\ntest_bytes.timer:1000|ms"
         )
 
     def test_unicode(self, mock_logging):
@@ -130,23 +132,25 @@ class TestStatsdPublisher(object):
         port = self._start_udp_socket()
 
         metrics = [
-            Counter(u'test_unicode.counter', initial_value=1),
-            Gauge(u'test_unicode.gauge', initial_value=42),
-            Histogram(u'test_unicode.histogram', initial_value=6),
-            Timer(u'test_unicode.timer', initial_value=1),
+            Counter("test_unicode.counter", initial_value=1),
+            Gauge("test_unicode.gauge", initial_value=42),
+            Histogram("test_unicode.histogram", initial_value=6),
+            Timer("test_unicode.timer", initial_value=1),
         ]  # type: List[Metric]
 
         self.all_received = False
 
-        publisher = StatsdPublisher('localhost', port)
+        publisher = StatsdPublisher("localhost", port)
         publisher.publish(metrics)
 
         # We want to make sure that no logging was called at all
         # We test it this way so that any unexpected calls are printed to the output
         if mock_logging.getLogger.return_value.error.called:
-            raise AssertionError('No errors should have been logged. Instead got: {}'.format(
-                mock_logging.getLogger.return_value.error.call_args_list
-            ))
+            raise AssertionError(
+                "No errors should have been logged. Instead got: {}".format(
+                    mock_logging.getLogger.return_value.error.call_args_list
+                )
+            )
 
         self.all_received = True
 
@@ -155,7 +159,7 @@ class TestStatsdPublisher(object):
 
         assert received is not None
         assert received == (
-            b'test_unicode.counter:1|c\ntest_unicode.gauge:42|g\ntest_unicode.histogram:6|ms\ntest_unicode.timer:1000|ms'
+            b"test_unicode.counter:1|c\ntest_unicode.gauge:42|g\ntest_unicode.histogram:6|ms\ntest_unicode.timer:1000|ms"
         )
 
     def test_meta_metrics(self, mock_logging):
@@ -165,39 +169,39 @@ class TestStatsdPublisher(object):
         port = self._start_udp_socket()
 
         metrics = [
-            Counter(u'test_meta_metrics.counter', initial_value=1),
-            Gauge(u'test_meta_metrics.gauge', initial_value=9),
-            Histogram(u'test_meta_metrics.histogram', initial_value=27),
-            Timer(u'test_meta_metrics.timer', initial_value=1),
+            Counter("test_meta_metrics.counter", initial_value=1),
+            Gauge("test_meta_metrics.gauge", initial_value=9),
+            Histogram("test_meta_metrics.histogram", initial_value=27),
+            Timer("test_meta_metrics.timer", initial_value=1),
         ]  # type: List[Metric]
 
         self.all_received = False
 
-        publisher = StatsdPublisher('localhost', port)
+        publisher = StatsdPublisher("localhost", port)
         publisher.publish(metrics)  # Remove enable_meta_metrics parameter
 
         # We want to make sure that no logging was called at all
         if mock_logging.getLogger.return_value.error.called:
-            raise AssertionError('No errors should have been logged. Instead got: {}'.format(
-                mock_logging.getLogger.return_value.error.call_args_list
-            ))
+            raise AssertionError(
+                "No errors should have been logged. Instead got: {}".format(
+                    mock_logging.getLogger.return_value.error.call_args_list
+                )
+            )
 
         assert self.sock is not None
         received = self.sock.recv(2048)
 
         assert received is not None
 
-        msg = received.decode('utf-8')
-
         # Test that we received the expected metrics
-        assert b'test_meta_metrics.counter:1|c' in received
-        assert b'test_meta_metrics.gauge:9|g' in received
-        assert b'test_meta_metrics.histogram:27|ms' in received
-        assert b'test_meta_metrics.timer:1000|ms' in received
+        assert b"test_meta_metrics.counter:1|c" in received
+        assert b"test_meta_metrics.gauge:9|g" in received
+        assert b"test_meta_metrics.histogram:27|ms" in received
+        assert b"test_meta_metrics.timer:1000|ms" in received
 
         self.all_received = True
 
-    @mock.patch('pymetrics.publishers.statsd.socket')
+    @mock.patch("pymetrics.publishers.statsd.socket")
     def test_meta_metrics_max_packet(self, mock_socket, mock_logging):
         """
         Test that basic packet sending works
@@ -213,9 +217,9 @@ class TestStatsdPublisher(object):
 
         metrics = []  # type: List[Metric]
         for i in range(0, 10):
-            metrics.append(Counter(u'pysoa.test.test_bytes.counter_{:04d}'.format(i), initial_value=1))
+            metrics.append(Counter("pysoa.test.test_bytes.counter_{:04d}".format(i), initial_value=1))
 
-        publisher = StatsdPublisher('localhost', 1234)
+        publisher = StatsdPublisher("localhost", 1234)
         publisher.publish(metrics)  # Remove error_logger and enable_meta_metrics parameters
 
         mock_socket.socket.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
@@ -232,18 +236,20 @@ class TestStatsdPublisher(object):
 
         metrics = []  # type: List[Metric]
         for i in range(0, 10):
-            metrics.append(Counter(u'pysoa.test.test_bytes.counter_{:04d}'.format(i), initial_value=1))
+            metrics.append(Counter("pysoa.test.test_bytes.counter_{:04d}".format(i), initial_value=1))
 
         self.all_received = False
 
-        publisher = StatsdPublisher('localhost', port)
+        publisher = StatsdPublisher("localhost", port)
         publisher.publish(metrics)  # Remove enable_meta_metrics parameter
 
         # We want to make sure that no logging was called at all
         if mock_logging.getLogger.return_value.error.called:
-            raise AssertionError('No errors should have been logged. Instead got: {}'.format(
-                mock_logging.getLogger.return_value.error.call_args_list
-            ))
+            raise AssertionError(
+                "No errors should have been logged. Instead got: {}".format(
+                    mock_logging.getLogger.return_value.error.call_args_list
+                )
+            )
 
         assert self.sock is not None
         received = self.sock.recv(2048)
@@ -262,18 +268,20 @@ class TestStatsdPublisher(object):
 
         metrics = []  # type: List[Metric]
         for i in range(0, 5):
-            metrics.append(Counter(u'pysoa.test.test_bytes.counter_{:04d}'.format(i), initial_value=1))
+            metrics.append(Counter("pysoa.test.test_bytes.counter_{:04d}".format(i), initial_value=1))
 
         self.all_received = False
 
-        publisher = StatsdPublisher('localhost', port)
+        publisher = StatsdPublisher("localhost", port)
         publisher.publish(metrics)  # Remove enable_meta_metrics parameter
 
         # We want to make sure that no logging was called at all
         if mock_logging.getLogger.return_value.error.called:
-            raise AssertionError('No errors should have been logged. Instead got: {}'.format(
-                mock_logging.getLogger.return_value.error.call_args_list
-            ))
+            raise AssertionError(
+                "No errors should have been logged. Instead got: {}".format(
+                    mock_logging.getLogger.return_value.error.call_args_list
+                )
+            )
 
         assert self.sock is not None
         received = self.sock.recv(2048)

@@ -1,7 +1,16 @@
-import logging
-import pytest
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
 
-from pymetrics.instruments import Counter, Gauge, Histogram, Timer
+import logging
+
+from pymetrics.instruments import (
+    Counter,
+    Gauge,
+    Histogram,
+    Timer,
+)
 from pymetrics.publishers.logging import LoggingMetricsPublisher
 
 

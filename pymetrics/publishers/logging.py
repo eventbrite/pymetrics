@@ -1,5 +1,14 @@
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
+
 import logging
-from typing import Iterable, Union, Any
+from typing import (
+    Any,
+    Iterable,
+    Union,
+)
 
 from pymetrics.instruments import Metric
 from pymetrics.publishers.base import MetricsPublisher
@@ -30,7 +39,7 @@ class LoggingMetricsPublisher(MetricsPublisher):
         :return: The string representation
         """
         if isinstance(value, bytes):
-            return value.decode('utf-8')
+            return value.decode("utf-8")
         return str(value)
 
     def publish(self, metrics, flush=True):
@@ -46,6 +55,6 @@ class LoggingMetricsPublisher(MetricsPublisher):
 
         formatted_metrics = []
         for metric in metrics:
-            formatted_metrics.append(' '.join((metric.name, self._get_str_value(metric.value))))
+            formatted_metrics.append(" ".join((metric.name, self._get_str_value(metric.value))))
 
-        self.logger.log(self.log_level, 'Metrics: %s', '; '.join(formatted_metrics))
+        self.logger.log(self.log_level, "Metrics: %s", "; ".join(formatted_metrics))

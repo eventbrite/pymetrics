@@ -1,8 +1,20 @@
-import pytest
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
+
 from unittest import mock
 
-from pymetrics.recorders.base import MetricsRecorder, metric_decorator
-from pymetrics.instruments import Counter, Timer
+import pytest
+
+from pymetrics.instruments import (
+    Counter,
+    Timer,
+)
+from pymetrics.recorders.base import (
+    MetricsRecorder,
+    metric_decorator,
+)
 
 
 class ConcreteRecorder(MetricsRecorder):
@@ -18,12 +30,14 @@ class ConcreteRecorder(MetricsRecorder):
 
     def record_histogram(self, name, value, **tags):
         from pymetrics.instruments import Histogram
+
         histogram = Histogram(name, value, **tags)
         self.metrics.append(histogram)
         return histogram
 
     def record_timer(self, name, value, resolution=None, **tags):
-        from pymetrics.instruments import Timer, TimerResolution
+        from pymetrics.instruments import TimerResolution
+
         if resolution is None:
             resolution = TimerResolution.MILLISECONDS
         timer = Timer(name, value, resolution, **tags)
@@ -32,6 +46,7 @@ class ConcreteRecorder(MetricsRecorder):
 
     def record_gauge(self, name, value, **tags):
         from pymetrics.instruments import Gauge
+
         gauge = Gauge(name, value, **tags)
         self.metrics.append(gauge)
         return gauge
@@ -55,29 +70,29 @@ def test_recorder_abstract_methods():
     recorder = ConcreteRecorder()
 
     # Test counter recording
-    counter = recorder.record_counter('test.counter', 5, tag1='value1')
+    counter = recorder.record_counter("test.counter", 5, tag1="value1")
     assert isinstance(counter, Counter)
-    assert counter.name == 'test.counter'
+    assert counter.name == "test.counter"
     assert counter.value == 5
-    assert counter.tags == {'tag1': 'value1'}
+    assert counter.tags == {"tag1": "value1"}
 
     # Test histogram recording
-    histogram = recorder.record_histogram('test.histogram', 10, tag2='value2')
-    assert histogram.name == 'test.histogram'
+    histogram = recorder.record_histogram("test.histogram", 10, tag2="value2")
+    assert histogram.name == "test.histogram"
     assert histogram.value == 10
-    assert histogram.tags == {'tag2': 'value2'}
+    assert histogram.tags == {"tag2": "value2"}
 
     # Test timer recording
-    timer = recorder.record_timer('test.timer', 1000, tag3='value3')
-    assert timer.name == 'test.timer'
+    timer = recorder.record_timer("test.timer", 1000, tag3="value3")
+    assert timer.name == "test.timer"
     assert timer.value == 1000000  # Timer multiplies by resolution
-    assert timer.tags == {'tag3': 'value3'}
+    assert timer.tags == {"tag3": "value3"}
 
     # Test gauge recording
-    gauge = recorder.record_gauge('test.gauge', 50, tag4='value4')
-    assert gauge.name == 'test.gauge'
+    gauge = recorder.record_gauge("test.gauge", 50, tag4="value4")
+    assert gauge.name == "test.gauge"
     assert gauge.value == 50
-    assert gauge.tags == {'tag4': 'value4'}
+    assert gauge.tags == {"tag4": "value4"}
 
 
 def test_recorder_configure():
@@ -91,7 +106,7 @@ def test_recorder_configure():
     recorder.configure({})
 
     # Test with some config
-    config = {'setting1': 'value1', 'setting2': 'value2'}
+    config = {"setting1": "value1", "setting2": "value2"}
     recorder.configure(config)
 
     # Should not raise any exceptions
@@ -105,13 +120,13 @@ def test_recorder_get_metrics():
     assert recorder.get_metrics() == []
 
     # Add some metrics
-    recorder.record_counter('test.counter', 5)
-    recorder.record_gauge('test.gauge', 10)
+    recorder.record_counter("test.counter", 5)
+    recorder.record_gauge("test.gauge", 10)
 
     metrics = recorder.get_metrics()
     assert len(metrics) == 2
-    assert any(m.name == 'test.counter' for m in metrics)
-    assert any(m.name == 'test.gauge' for m in metrics)
+    assert any(m.name == "test.counter" for m in metrics)
+    assert any(m.name == "test.gauge" for m in metrics)
 
 
 def test_metric_decorator_basic():
@@ -121,7 +136,7 @@ def test_metric_decorator_basic():
     def get_recorder():
         return recorder
 
-    @metric_decorator(get_recorder, 'timer', 'test.timer')
+    @metric_decorator(get_recorder, "timer", "test.timer")
     def test_function():
         return "success"
 
@@ -131,7 +146,7 @@ def test_metric_decorator_basic():
     # Check that a timer was created
     metrics = recorder.get_metrics()
     assert len(metrics) == 1
-    assert metrics[0].name == 'test.timer'
+    assert metrics[0].name == "test.timer"
 
 
 def test_metric_decorator_with_args():
@@ -141,7 +156,7 @@ def test_metric_decorator_with_args():
     def get_recorder():
         return recorder
 
-    @metric_decorator(get_recorder, 'counter', 'test.counter', 5, tag1='value1')
+    @metric_decorator(get_recorder, "counter", "test.counter", 5, tag1="value1")
     def test_function():
         return "success"
 
@@ -151,9 +166,9 @@ def test_metric_decorator_with_args():
     # Check that a counter was created with the right parameters
     metrics = recorder.get_metrics()
     assert len(metrics) == 1
-    assert metrics[0].name == 'test.counter'
+    assert metrics[0].name == "test.counter"
     assert metrics[0].value == 6  # Initial value 5 + 1 from record_over_function
-    assert metrics[0].tags == {'tag1': 'value1'}
+    assert metrics[0].tags == {"tag1": "value1"}
 
 
 def test_metric_decorator_with_include_metric():
@@ -163,10 +178,10 @@ def test_metric_decorator_with_include_metric():
     def get_recorder():
         return recorder
 
-    @metric_decorator(get_recorder, 'timer', 'test.timer', include_metric=True)
+    @metric_decorator(get_recorder, "timer", "test.timer", include_metric=True)
     def test_function(metric=None):
         assert metric is not None
-        assert metric.name == 'test.timer'
+        assert metric.name == "test.timer"
         return "success"
 
     result = test_function()
@@ -180,8 +195,8 @@ def test_metric_decorator_chained():
     def get_recorder():
         return recorder
 
-    @metric_decorator(get_recorder, 'counter', 'test.counter')
-    @metric_decorator(get_recorder, 'timer', 'test.timer')
+    @metric_decorator(get_recorder, "counter", "test.counter")
+    @metric_decorator(get_recorder, "timer", "test.timer")
     def test_function():
         return "success"
 
@@ -191,8 +206,8 @@ def test_metric_decorator_chained():
     # Check that both metrics were created
     metrics = recorder.get_metrics()
     assert len(metrics) == 2
-    assert any(m.name == 'test.counter' for m in metrics)
-    assert any(m.name == 'test.timer' for m in metrics)
+    assert any(m.name == "test.counter" for m in metrics)
+    assert any(m.name == "test.timer" for m in metrics)
 
 
 def test_metric_decorator_with_function_args():
@@ -202,7 +217,7 @@ def test_metric_decorator_with_function_args():
     def get_recorder():
         return recorder
 
-    @metric_decorator(get_recorder, 'timer', 'test.timer')
+    @metric_decorator(get_recorder, "timer", "test.timer")
     def test_function(arg1, arg2, kwarg1=None):
         assert arg1 == "value1"
         assert arg2 == "value2"
@@ -222,9 +237,9 @@ def test_metric_decorator_deep_copy():
 
     # Test with mutable arguments
     mutable_list = [1, 2, 3]
-    mutable_dict = {'key': 'value'}
+    mutable_dict = {"key": "value"}
 
-    @metric_decorator(get_recorder, 'counter', 'test.counter', 5, **mutable_dict)
+    @metric_decorator(get_recorder, "counter", "test.counter", 5, **mutable_dict)
     def test_function():
         return "success"
 
@@ -233,15 +248,16 @@ def test_metric_decorator_deep_copy():
 
     # The original mutable objects should not be modified
     assert mutable_list == [1, 2, 3]
-    assert mutable_dict == {'key': 'value'}
+    assert mutable_dict == {"key": "value"}
 
 
 def test_metric_decorator_recorder_fetcher_error():
     """Test the metric decorator when recorder fetcher fails."""
+
     def get_recorder():
         raise Exception("Recorder not available")
 
-    @metric_decorator(get_recorder, 'timer', 'test.timer')
+    @metric_decorator(get_recorder, "timer", "test.timer")
     def test_function():
         return "success"
 
@@ -257,7 +273,7 @@ def test_metric_decorator_metric_creation_error():
         return recorder
 
     # Use an invalid metric type that doesn't exist
-    @metric_decorator(get_recorder, 'invalid_metric', 'test.metric')
+    @metric_decorator(get_recorder, "invalid_metric", "test.metric")
     def test_function():
         return "success"
 

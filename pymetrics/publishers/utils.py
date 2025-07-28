@@ -1,12 +1,15 @@
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
+
 from typing import Iterable
 
 from pymetrics.instruments import Metric
 from pymetrics.publishers.base import MetricsPublisher
 
 
-__all__ = (
-    'publish_metrics',
-)
+__all__ = ("publish_metrics",)
 
 
 def publish_metrics(metrics, configuration):

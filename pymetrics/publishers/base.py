@@ -1,12 +1,15 @@
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
+
 import abc
 from typing import Iterable
 
 from pymetrics.instruments import Metric
 
 
-__all__ = (
-    'MetricsPublisher',
-)
+__all__ = ("MetricsPublisher",)
 
 
 class MetricsPublisher(abc.ABC):

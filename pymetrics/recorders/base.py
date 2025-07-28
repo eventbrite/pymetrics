@@ -1,14 +1,19 @@
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
+
 import abc
 import copy
 import functools
 from typing import (
     Any,
     Callable,
-    TypeVar,
     Dict,
     List,
     Optional,
     Type,
+    TypeVar,
     Union,
 )
 
@@ -24,13 +29,13 @@ from pymetrics.instruments import (
 
 
 __all__ = (
-    'MetricsRecorder',
-    'metric_decorator',
+    "MetricsRecorder",
+    "metric_decorator",
 )
 
 
-M = TypeVar('M', bound=Metric)
-R = TypeVar('R')
+M = TypeVar("M", bound=Metric)
+R = TypeVar("R")
 
 
 class MetricsRecorder(abc.ABC):
@@ -115,15 +120,12 @@ class MetricsRecorder(abc.ABC):
         pass
 
 
-Tag = Union[str, bytes, int, float, bool, None]
-
-
 def metric_decorator(
     recorder_fetcher,  # type: Callable[[], MetricsRecorder]
     metric_type,  # type: str
     metric_name,  # type: str
     *metric_args,  # type: Any
-    **metric_kwargs  # type: Any
+    **metric_kwargs,  # type: Any
 ):
     # type: (...) -> Callable[[Callable[..., R]], Callable[..., R]]
     """
@@ -171,18 +173,19 @@ def metric_decorator(
     :param metric_args: The positional arguments passed to the metric
     :param metric_kwargs: The keyword arguments passed to the metric
     """
+
     def real_decorator(f):  # type: (Callable[..., R]) -> Callable[..., R]
         @functools.wraps(f)
         def wrapper(*args, **kwargs):  # type: (*Any, **Any) -> R
             m_kwargs = copy.deepcopy(metric_kwargs)
-            include_metric = m_kwargs.pop(str('include_metric'), False)
+            include_metric = m_kwargs.pop(str("include_metric"), False)
 
             recorder = recorder_fetcher()
             method = getattr(recorder, metric_type)
             metric = method(metric_name, *copy.deepcopy(metric_args), **m_kwargs)
 
             if include_metric:
-                kwargs[str('metric')] = metric
+                kwargs[str("metric")] = metric
 
             return metric.record_over_function(f, *args, **kwargs)
 

@@ -1,11 +1,32 @@
+from __future__ import (
+    absolute_import,
+    unicode_literals,
+)
+
 import copy
 import time
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+)
 
-from pymetrics.instruments import Counter, Gauge, Histogram, Metric, Timer, TimerResolution
+from pymetrics.instruments import (
+    Counter,
+    Gauge,
+    Histogram,
+    Metric,
+    Timer,
+    TimerResolution,
+)
 from pymetrics.recorders.base import MetricsRecorder
 
-M = TypeVar('M', bound=Metric)
+
+M = TypeVar("M", bound=Metric)
 
 
 class DefaultMetricsRecorder(MetricsRecorder):
@@ -55,7 +76,7 @@ class DefaultMetricsRecorder(MetricsRecorder):
 
         # Sort tags for consistent key generation
         sorted_tags = sorted(tags.items())
-        tag_str = ','.join(f"{k}={v}" for k, v in sorted_tags)
+        tag_str = ",".join(f"{k}={v}" for k, v in sorted_tags)
         return f"{name}:{tag_str}"
 
     def _get_or_create_metrics(self, original, name, force_new, metric_type, initial_value, **tags):
@@ -115,9 +136,7 @@ class DefaultMetricsRecorder(MetricsRecorder):
         :return: The histogram instance
         """
         full_name = self._get_metric_name(name)
-        histogram = self._get_or_create_metrics(
-            self.histograms, full_name, False, Histogram, 0, **tags
-        )
+        histogram = self._get_or_create_metrics(self.histograms, full_name, False, Histogram, 0, **tags)
         histogram.set(value)
         return histogram
 
@@ -137,9 +156,7 @@ class DefaultMetricsRecorder(MetricsRecorder):
         if resolution is None:
             resolution = TimerResolution.MILLISECONDS
 
-        timer = self._get_or_create_metrics(
-            self.timers, full_name, False, Timer, 0, resolution=resolution, **tags
-        )
+        timer = self._get_or_create_metrics(self.timers, full_name, False, Timer, 0, resolution=resolution, **tags)
         timer.set(value)
         return timer
 
@@ -155,9 +172,7 @@ class DefaultMetricsRecorder(MetricsRecorder):
         :return: The gauge instance
         """
         full_name = self._get_metric_name(name)
-        gauge = self._get_or_create_metrics(
-            self.gauges, full_name, False, Gauge, 0, **tags
-        )
+        gauge = self._get_or_create_metrics(self.gauges, full_name, False, Gauge, 0, **tags)
         gauge.set(value)
         return gauge
 
@@ -172,8 +187,10 @@ class DefaultMetricsRecorder(MetricsRecorder):
         metrics.extend(self.counters.values())
         metrics.extend(gauge for gauges in self.gauges.values() for gauge in gauges if gauge.value is not None)
         metrics.extend(
-            histogram for histograms in self.histograms.values()
-            for histogram in histograms if histogram.value is not None
+            histogram
+            for histograms in self.histograms.values()
+            for histogram in histograms
+            if histogram.value is not None
         )
         metrics.extend(timer for timers in self.timers.values() for timer in timers if timer.value is not None)
         return metrics
@@ -198,8 +215,8 @@ class DefaultMetricsRecorder(MetricsRecorder):
         :param config: The configuration dictionary
         """
         if config:
-            self.prefix = config.get('prefix', self.prefix)
-            self.meta = config.get('meta', self.meta)
+            self.prefix = config.get("prefix", self.prefix)
+            self.meta = config.get("meta", self.meta)
 
     @classmethod
     def get_config_from_django(cls):
@@ -211,9 +228,10 @@ class DefaultMetricsRecorder(MetricsRecorder):
         """
         try:
             from django.conf import settings
+
             return {
-                'prefix': getattr(settings, 'PYMETRICS_PREFIX', None),
-                'meta': getattr(settings, 'PYMETRICS_META', False),
+                "prefix": getattr(settings, "PYMETRICS_PREFIX", None),
+                "meta": getattr(settings, "PYMETRICS_META", False),
             }
         except ImportError:
             return None
