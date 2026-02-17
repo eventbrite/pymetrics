@@ -10,8 +10,11 @@ PyMetrics - Versatile Metrics Collection for Python
 .. image:: https://img.shields.io/pypi/l/pymetrics.svg
     :target: https://pypi.python.org/pypi/pymetrics
 
-.. image:: https://api.travis-ci.org/eventbrite/pymetrics.svg
-    :target: https://travis-ci.org/eventbrite/pymetrics
+.. image:: https://qlty.sh/gh/eventbrite/projects/pymetrics/maintainability.svg
+    :target: https://qlty.sh/gh/eventbrite/projects/pymetrics
+
+.. image:: https://qlty.sh/gh/eventbrite/projects/pymetrics/coverage.svg
+    :target: https://qlty.sh/gh/eventbrite/projects/pymetrics
 
 .. image:: https://img.shields.io/pypi/v/pymetrics.svg
     :target: https://pypi.python.org/pypi/pymetrics
