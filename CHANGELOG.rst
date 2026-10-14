@@ -1,6 +1,10 @@
 Changelog
 =========
 
+1.0.11 (2026-10-14)
+-------------------
+- [PATCH] Allow typing-extensions 4.7.1 on Python 3.7
+
 1.0.10 (2023-11-28)
 -------------------
 - [PATCH] Use Ubuntu 20 for newer OpenSSL
