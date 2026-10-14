@@ -27,7 +27,9 @@ install_requires = [
     'enum34;python_version<"3.4"',
     'six',
     'typing~=3.7.4;python_version<"3.5"',
-    'typing-extensions~=3.10;python_version<"3.8"',
+    # Literal only. ~=3.10 excludes 4.x. 4.7.1 is the last release that
+    # installs on Python 3.7; 4.8 requires Python >=3.8.
+    'typing-extensions>=3.10,<4.8;python_version<"3.8"',
 ]
 
 mypy_require = [
